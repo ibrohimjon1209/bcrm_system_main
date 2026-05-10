@@ -148,7 +148,7 @@ const Reports = () => {
       value: reportData.revenue,
       trend: reportData.revenueTrend,
       icon: FiDollarSign,
-      color: 'from-blue-600 to-indigo-600',
+      color: 'from-blue-600 to-blue-700',
       shadow: 'shadow-blue-200'
     },
     {
@@ -156,16 +156,16 @@ const Reports = () => {
       value: reportData.profit,
       trend: reportData.profitTrend,
       icon: FiTrendingUp,
-      color: 'from-emerald-500 to-teal-600',
-      shadow: 'shadow-emerald-200'
+      color: 'from-blue-500 to-teal-600',
+      shadow: 'shadow-blue-200'
     },
     {
       title: 'Sotuvlar Soni',
       value: reportData.salesCount,
       trend: reportData.salesTrend,
       icon: FiShoppingCart,
-      color: 'from-violet-500 to-purple-600',
-      shadow: 'shadow-purple-200',
+      color: 'from-blue-500 to-blue-600',
+      shadow: 'shadow-blue-200',
       isCurrency: false
     },
     {
@@ -173,8 +173,8 @@ const Reports = () => {
       value: reportData.debt,
       trend: reportData.debtTrend,
       icon: FiCreditCard,
-      color: 'from-rose-500 to-pink-600',
-      shadow: 'shadow-rose-200'
+      color: 'from-blue-500 to-pink-600',
+      shadow: 'shadow-blue-200'
     }
   ];
 
@@ -210,7 +210,7 @@ const Reports = () => {
                 key={period}
                 onClick={() => setDateFilter(period)}
                 className={`flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all duration-300 ${dateFilter === period
-                    ? 'bg-gray-900 text-white shadow-lg'
+                    ? 'bg-[#1447E6] text-white shadow-lg'
                     : 'text-gray-500 hover:bg-gray-50'
                   }`}
               >
@@ -226,9 +226,9 @@ const Reports = () => {
             const Icon = card.icon;
             const colors = [
               { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
-              { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
-              { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-100' },
-              { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' }
+              { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
+              { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100' },
+              { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' }
             ];
             const theme = colors[index % colors.length];
 
@@ -247,7 +247,7 @@ const Reports = () => {
                     <h2 className="text-xl font-bold text-gray-900 leading-tight mb-1 truncate">
                       {formatNumber(card.value)}
                     </h2>
-                    <div className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold ${card.trend >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                    <div className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold ${card.trend >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'
                       }`}>
                       {card.trend >= 0 ? <FiArrowUpRight className="mr-0.5" /> : <FiArrowDownRight className="mr-0.5" />}
                       {Math.abs(card.trend)}%
@@ -402,7 +402,7 @@ const Reports = () => {
           {/* Top Products */}
           <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
                 <FiPackage className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-gray-900">Top Mahsulotlar</h3>
@@ -411,7 +411,7 @@ const Reports = () => {
             <div className="space-y-4">
               {reportData.topProducts.map((product, index) => (
                 <div key={index} className="flex items-center gap-4 group cursor-pointer">
-                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center font-bold text-gray-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
+                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center font-bold text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                     {index + 1}
                   </div>
                   <div className="flex-1">
@@ -420,7 +420,7 @@ const Reports = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900 text-sm">{formatNumber(product.revenue)}</p>
-                    <p className={`text-[10px] font-semibold ${product.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    <p className={`text-[10px] font-semibold ${product.trend === 'up' ? 'text-blue-500' : 'text-blue-500'}`}>
                       {product.trend === 'up' ? '+' : '-'}12%
                     </p>
                   </div>
@@ -432,7 +432,7 @@ const Reports = () => {
           {/* Top Customers */}
           <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-gray-200/40 border border-white">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-700">
                 <FiUser className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-gray-900">Top Mijozlar</h3>
@@ -450,7 +450,7 @@ const Reports = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900 text-sm">{formatNumber(customer.spent)}</p>
-                    <p className="text-[10px] font-semibold text-emerald-500">+18.2%</p>
+                    <p className="text-[10px] font-semibold text-blue-500">+18.2%</p>
                   </div>
                 </div>
               ))}
@@ -462,14 +462,14 @@ const Reports = () => {
         <div className="px-4 grid grid-cols-2 gap-4 mb-12">
           <button
             onClick={() => handleExport('excel')}
-            className="flex items-center justify-center gap-3 px-6 py-4 bg-emerald-600 text-white rounded-3xl font-bold hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-95"
+            className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-3xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-95"
           >
             <FiDownload className="w-5 h-5" />
             Excel Export
           </button>
           <button
             onClick={() => handleExport('pdf')}
-            className="flex items-center justify-center gap-3 px-6 py-4 bg-rose-600 text-white rounded-3xl font-bold hover:bg-rose-700 shadow-xl shadow-rose-200 transition-all active:scale-95"
+            className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-3xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-95"
           >
             <FiPieChart className="w-5 h-5" />
             PDF Report

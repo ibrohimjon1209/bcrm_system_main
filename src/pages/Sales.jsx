@@ -109,8 +109,8 @@ const Sales = () => {
         <div className="bg-white rounded-2xl p-8 w-full max-w-sm animate-fade-in">
           <div className="text-center">
             {/* Green Checkmark */}
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FiCheck className="w-12 h-12 text-green-600" />
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FiCheck className="w-12 h-12 text-blue-600" />
             </div>
             
             {/* Total Amount */}
@@ -125,7 +125,7 @@ const Sales = () => {
             <div className="space-y-3">
               <button
                 onClick={handleViewReceipt}
-                className="w-full py-4 bg-purple-600 text-white rounded-2xl font-semibold hover:bg-purple-700 transition-colors"
+                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition-colors"
               >
                 Chekni ko'rish
               </button>
@@ -214,7 +214,7 @@ const Sales = () => {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <button className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors flex items-center justify-center">
+            <button className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center">
               <FiSend className="w-4 h-4 mr-2" />
               PDF yuborish
             </button>
@@ -261,7 +261,7 @@ const Sales = () => {
                 setSelectedCustomer(customer);
               }
             }}
-            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all text-gray-900 font-medium text-base"
+            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 font-medium text-base"
           >
             <option value="">Mijozni tanlang...</option>
             <option value="1">Ali Valiyev</option>
@@ -282,7 +282,7 @@ const Sales = () => {
                 placeholder="Qidirish..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-gray-50 rounded-xl text-xs border-none focus:ring-2 focus:ring-purple-500 transition-all"
+                className="w-full pl-9 pr-3 py-2 bg-gray-50 rounded-xl text-xs border-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
             </div>
           </div>
@@ -293,15 +293,15 @@ const Sales = () => {
                 key={product.id} 
                 onClick={() => product.stock > 0 && addToCart(product)}
                 className={`group cursor-pointer bg-white rounded-2xl p-3 border border-gray-100 transition-all duration-200 ${
-                  product.stock === 0 ? 'opacity-50' : 'hover:border-purple-500 hover:shadow-md active:scale-95'
+                  product.stock === 0 ? 'opacity-50' : 'hover:border-blue-500 hover:shadow-md active:scale-95'
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
-                    <FiPackage className="w-4 h-4 text-purple-600" />
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <FiPackage className="w-4 h-4 text-blue-600" />
                   </div>
                   <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${
-                    product.stock === 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                    product.stock === 0 ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'
                   }`}>
                     {product.stock === 0 ? 'Yo\'q' : `${product.stock} dona`}
                   </span>
@@ -309,8 +309,8 @@ const Sales = () => {
                 
                 <h4 className="font-semibold text-gray-800 text-xs mb-1 truncate">{product.name}</h4>
                 <div className="flex items-center justify-between">
-                  <p className="text-purple-600 font-bold text-sm">{product.price.toLocaleString()}</p>
-                  <button className="w-6 h-6 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <p className="text-blue-600 font-bold text-sm">{product.price.toLocaleString()}</p>
+                  <button className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <FiPlus className="w-3 h-3" />
                   </button>
                 </div>
@@ -324,7 +324,7 @@ const Sales = () => {
           <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900 tracking-tight">Savatcha</h3>
-              <span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-xl text-xs font-bold">{cart.length} ta mahsulot</span>
+              <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-xl text-xs font-bold">{cart.length} ta mahsulot</span>
             </div>
             
             <div className="space-y-6">
@@ -338,7 +338,7 @@ const Sales = () => {
                     </div>
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
+                      className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
                     >
                       <FiX className="w-5 h-5" />
                     </button>
@@ -350,14 +350,14 @@ const Sales = () => {
                       <div className="flex items-center bg-white rounded-xl border border-gray-100 p-1 shadow-sm">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                         >
                           <FiMinus className="w-4 h-4" />
                         </button>
                         <span className="w-10 text-center font-bold text-gray-900">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                         >
                           <FiPlus className="w-4 h-4" />
                         </button>
@@ -366,7 +366,7 @@ const Sales = () => {
                     
                     <div className="text-right">
                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Jami</p>
-                      <p className="text-lg font-bold text-purple-600">
+                      <p className="text-lg font-bold text-blue-600">
                         {(item.price * item.quantity).toLocaleString()} <span className="text-xs font-medium opacity-60">so'm</span>
                       </p>
                     </div>
@@ -388,7 +388,7 @@ const Sales = () => {
                     onClick={() => setPaymentType(type)}
                     className={`py-2 px-3 rounded-xl font-medium transition-colors ${
                       paymentType === type
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -403,7 +403,7 @@ const Sales = () => {
                   placeholder="To'langan summa"
                   value={paidAmount}
                   onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               )}
               
@@ -415,7 +415,7 @@ const Sales = () => {
                 {(paymentType === 'Qisman' && paidAmount) && (
                   <div className="flex justify-between text-sm">
                     <span>Qarz:</span>
-                    <span className="text-red-600">{getRemainingDebt().toLocaleString()} so'm</span>
+                    <span className="text-blue-600">{getRemainingDebt().toLocaleString()} so'm</span>
                   </div>
                 )}
               </div>
@@ -427,7 +427,7 @@ const Sales = () => {
         {cart.length > 0 && (
           <button
             onClick={handleCompleteSale}
-            className="w-full py-4 bg-purple-600 text-white rounded-2xl font-semibold hover:bg-purple-700 transition-colors shadow-lg"
+            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             Sotuvni yakunlash
           </button>

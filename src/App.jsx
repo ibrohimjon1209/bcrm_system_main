@@ -2,8 +2,10 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
-import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import Login from './pages/Login';
+import Notification from './pages/Notification';
+import Customers from './pages/Customers';
 import Warehouse from './pages/Warehouse';
 import Sales from './pages/Sales';
 import Reports from './pages/Reports';
@@ -28,7 +30,7 @@ const ProtectedRoute = ({ children }) => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -45,7 +47,12 @@ const AppContent = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={
           <ProtectedRoute>
-            <Dashboard />
+            <Home />
+          </ProtectedRoute>
+        } />
+        <Route path="/notification" element={
+          <ProtectedRoute>
+            <Notification />
           </ProtectedRoute>
         } />
         <Route path="/sales" element={
@@ -60,7 +67,7 @@ const AppContent = () => {
         } />
         <Route path="/customers" element={
           <ProtectedRoute>
-            <div className="p-4 pb-32"><h1 className="text-2xl font-bold">Mijozlar</h1></div>
+            <Customers />
           </ProtectedRoute>
         } />
         <Route path="/reports" element={
