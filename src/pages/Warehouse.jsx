@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiX, FiPackage, FiCheck } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiPackage, FiCheck } from 'react-icons/fi';
+import warehouseService from '../services/warehouse.service';
+import { toast } from 'react-toastify';
 
 const Warehouse = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const [categories, setCategories] = useState(['Balon', 'Folga', 'Geliy', 'To\'plam', 'Bezak']);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
@@ -18,55 +20,41 @@ const Warehouse = () => {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'Balon',
+    category: '',
     quantity: '',
-    price: ''
+    sale_price: '',
+    cost_price: '',
+    unit: 'dona',
+    low_stock_threshold: 10
   });
 
-  // Initialize with sample data
-  useEffect(() => {
-    const sampleProducts = [
-      {
-        id: 1,
-        name: 'Qizil balon 12"',
-        category: 'Balon',
-        quantity: 45,
-        price: 15000,
-        status: 'good'
-      },
-      {
-        id: 2,
-        name: 'Oltin folga',
-        category: 'Folga',
-        quantity: 8,
-        price: 8000,
-        status: 'low'
-      },
-      {
-        id: 3,
-        name: 'Geliy ballon',
-        category: 'Geliy',
-        quantity: 5,
-        price: 25000,
-        status: 'critical'
-      },
-      {
-        id: 4,
-        name: 'Tugmalar to\'plami',
-        category: 'To\'plam',
-        quantity: 23,
-        price: 12000,
-        status: 'good'
+  // Fetch products and categories
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [productsData, categoriesData] = await Promise.all([
+        warehouseService.getProducts({ search: searchTerm }),
+        warehouseService.getCategories()
+      ]);
+      setProducts(productsData.results || productsData);
+      const catList = categoriesData.results || categoriesData;
+      setCategories(catList);
+      
+      // Set default category for form if not set
+      if (catList.length > 0 && !formData.category) {
+        setFormData(prev => ({ ...prev, category: catList[0].id }));
       }
-    ];
-    setProducts(sampleProducts);
-  }, []);
-
-  const getStockStatus = (quantity) => {
-    if (quantity >= 20) return 'good';
-    if (quantity >= 10) return 'low';
-    return 'critical';
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Ma\'lumotlarni yuklashda xatolik yuz berdi');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [searchTerm]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -86,48 +74,50 @@ const Warehouse = () => {
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleAddProduct = () => {
-    const newProduct = {
-      id: Date.now(),
-      name: formData.name,
-      category: formData.category,
-      quantity: parseInt(formData.quantity),
-      price: parseInt(formData.price),
-      status: getStockStatus(parseInt(formData.quantity))
-    };
-    
-    setProducts([...products, newProduct]);
-    setShowAddModal(false);
-    resetForm();
+  const handleAddProduct = async () => {
+    try {
+      await warehouseService.createProduct({
+        ...formData,
+        quantity: parseInt(formData.quantity),
+        sale_price: formData.sale_price,
+        cost_price: formData.cost_price || "0"
+      });
+      toast.success('Mahsulot muvaffaqiyatli qo\'shildi');
+      setShowAddModal(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      toast.error('Mahsulot qo\'shishda xatolik');
+    }
   };
 
-  const handleEditProduct = () => {
-    const updatedProducts = products.map(product =>
-      product.id === selectedProduct.id
-        ? {
-            ...product,
-            name: formData.name,
-            category: formData.category,
-            quantity: parseInt(formData.quantity),
-            price: parseInt(formData.price),
-            status: getStockStatus(parseInt(formData.quantity))
-          }
-        : product
-    );
-    
-    setProducts(updatedProducts);
-    setShowEditModal(false);
-    resetForm();
+  const handleEditProduct = async () => {
+    try {
+      await warehouseService.updateProduct(selectedProduct.id, {
+        ...formData,
+        quantity: parseInt(formData.quantity),
+        sale_price: formData.sale_price,
+        cost_price: formData.cost_price
+      });
+      toast.success('Mahsulot yangilandi');
+      setShowEditModal(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      toast.error('Mahsulotni yangilashda xatolik');
+    }
   };
 
-  const handleDeleteProduct = () => {
-    setProducts(products.filter(product => product.id !== selectedProduct.id));
-    setShowDeleteModal(false);
-    setSelectedProduct(null);
+  const handleDeleteProduct = async () => {
+    try {
+      await warehouseService.deleteProduct(selectedProduct.id);
+      toast.success('Mahsulot o\'chirildi');
+      setShowDeleteModal(false);
+      setSelectedProduct(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Mahsulotni o\'chirishda xatolik');
+    }
   };
 
   const openEditModal = (product) => {
@@ -136,7 +126,10 @@ const Warehouse = () => {
       name: product.name,
       category: product.category,
       quantity: product.quantity.toString(),
-      price: product.price.toString()
+      sale_price: product.sale_price.toString(),
+      cost_price: product.cost_price?.toString() || '',
+      unit: product.unit || 'dona',
+      low_stock_threshold: product.low_stock_threshold || 10
     });
     setShowEditModal(true);
   };
@@ -147,14 +140,28 @@ const Warehouse = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: categories[0] || '', quantity: '', price: '' });
+    setFormData({ 
+      name: '', 
+      category: categories[0]?.id || '', 
+      quantity: '', 
+      sale_price: '',
+      cost_price: '',
+      unit: 'dona',
+      low_stock_threshold: 10
+    });
     setSelectedProduct(null);
   };
 
-  const handleAddCategory = () => {
-    if (newCategory && !categories.includes(newCategory)) {
-      setCategories([...categories, newCategory]);
-      setNewCategory('');
+  const handleAddCategory = async () => {
+    if (newCategory) {
+      try {
+        await warehouseService.createCategory({ name: newCategory });
+        setNewCategory('');
+        fetchData();
+        toast.success('Kategoriya qo\'shildi');
+      } catch (error) {
+        toast.error('Kategoriya qo\'shishda xatolik');
+      }
     }
   };
 
@@ -163,22 +170,34 @@ const Warehouse = () => {
     setShowCatDeleteConfirm(true);
   };
 
-  const confirmDeleteCategory = () => {
-    setCategories(categories.filter(c => c !== categoryToDelete));
-    setShowCatDeleteConfirm(false);
-    setCategoryToDelete(null);
+  const confirmDeleteCategory = async () => {
+    try {
+      await warehouseService.deleteCategory(categoryToDelete.id);
+      setShowCatDeleteConfirm(false);
+      setCategoryToDelete(null);
+      fetchData();
+      toast.success('Kategoriya o\'chirildi');
+    } catch (error) {
+      toast.error('Kategoriyani o\'chirishda xatolik');
+    }
   };
 
   const handleStartEdit = (cat) => {
     setEditingCategory(cat);
-    setEditValue(cat);
+    setEditValue(cat.name);
   };
 
-  const handleUpdateCategory = () => {
-    if (editValue && editValue !== editingCategory && !categories.includes(editValue)) {
-      setCategories(categories.map(c => c === editingCategory ? editValue : c));
-      setEditingCategory(null);
-    } else if (editValue === editingCategory) {
+  const handleUpdateCategory = async () => {
+    if (editValue && editValue !== editingCategory.name) {
+      try {
+        await warehouseService.updateCategory(editingCategory.id, { name: editValue });
+        setEditingCategory(null);
+        fetchData();
+        toast.success('Kategoriya yangilandi');
+      } catch (error) {
+        toast.error('Kategoriyani yangilashda xatolik');
+      }
+    } else {
       setEditingCategory(null);
     }
   };
@@ -230,24 +249,35 @@ const Warehouse = () => {
 
       {/* Product Grid */}
       <div className="py-6">
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            <p className="mt-4 text-gray-500 font-medium">Yuklanmoqda...</p>
+          </div>
+        ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
             <div className="w-24 h-24 bg-gray-50 rounded-2xl flex items-center justify-center mb-6">
               <FiPackage className="w-12 h-12 text-gray-200" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Ombor bo'sh</h3>
-            <p className="text-gray-400 text-sm mb-8 text-center max-w-[240px]">Hali hech qanday mahsulot qo'shilmagan</p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-semibold hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-gray-200"
-            >
-              <FiPlus className="w-5 h-5" />
-              Mahsulot qo'shish
-            </button>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              {searchTerm ? 'Mahsulot topilmadi' : 'Ombor bo\'sh'}
+            </h3>
+            <p className="text-gray-400 text-sm mb-8 text-center max-w-[240px]">
+              {searchTerm ? 'Qidiruvga mos mahsulot topilmadi' : 'Hali hech qanday mahsulot qo\'shilmagan'}
+            </p>
+            {!searchTerm && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-semibold hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-gray-200"
+              >
+                <FiPlus className="w-5 h-5" />
+                Mahsulot qo'shish
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredProducts.map((product) => (
+            {products.map((product) => (
               <div 
                 key={product.id} 
                 className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 group hover:border-purple-200 transition-all duration-300"
@@ -263,7 +293,7 @@ const Warehouse = () => {
 
                 <div className="mb-4">
                   <span className="text-[9px] font-semibold text-purple-600 uppercase tracking-widest mb-1 block">
-                    {product.category}
+                    {product.category_name}
                   </span>
                   <h3 className="text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
                 </div>
@@ -271,11 +301,11 @@ const Warehouse = () => {
                 <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-3 mb-4">
                   <div>
                     <p className="text-[9px] text-gray-400 font-semibold uppercase">Qoldiq</p>
-                    <p className="text-base font-bold text-gray-900">{product.quantity} <span className="text-[10px] text-gray-400">dona</span></p>
+                    <p className="text-base font-bold text-gray-900">{product.quantity} <span className="text-[10px] text-gray-400">{product.unit || 'dona'}</span></p>
                   </div>
                   <div className="text-right">
                     <p className="text-[9px] text-gray-400 font-semibold uppercase">Narxi</p>
-                    <p className="text-base font-bold text-gray-900">{product.price.toLocaleString()} <span className="text-[10px] text-gray-400">so'm</span></p>
+                    <p className="text-base font-bold text-gray-900">{parseFloat(product.sale_price).toLocaleString()} <span className="text-[10px] text-gray-400">so'm</span></p>
                   </div>
                 </div>
 
@@ -327,39 +357,79 @@ const Warehouse = () => {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Turi</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Kategoriya</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Tanlang</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Birlik</label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="dona">Dona</option>
+                    <option value="kg">Kg</option>
+                    <option value="litr">Litr</option>
+                    <option value="metr">Metr</option>
+                  </select>
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Miqdor</label>
-                <input
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Miqdorni kiriting"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sotib olish narxi</label>
+                  <input
+                    type="number"
+                    value={formData.cost_price}
+                    onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sotish narxi</label>
+                  <input
+                    type="number"
+                    value={formData.sale_price}
+                    onChange={(e) => setFormData({...formData, sale_price: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Narx (so'm)</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Narxni kiriting"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Miqdor</label>
+                  <input
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Kam qolish chegarasi</label>
+                  <input
+                    type="number"
+                    value={formData.low_stock_threshold}
+                    onChange={(e) => setFormData({...formData, low_stock_threshold: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="10"
+                  />
+                </div>
               </div>
               
               <div className="flex gap-3 pt-4">
@@ -371,7 +441,7 @@ const Warehouse = () => {
                 </button>
                 <button
                   onClick={handleAddProduct}
-                  disabled={!formData.name || !formData.quantity || !formData.price}
+                  disabled={!formData.name || !formData.quantity || !formData.sale_price || !formData.category}
                   className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Saqlash
@@ -408,39 +478,75 @@ const Warehouse = () => {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Turi</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Kategoriya</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Tanlang</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Birlik</label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="dona">Dona</option>
+                    <option value="kg">Kg</option>
+                    <option value="litr">Litr</option>
+                    <option value="metr">Metr</option>
+                  </select>
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Miqdor</label>
-                <input
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Miqdorni kiriting"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sotib olish narxi</label>
+                  <input
+                    type="number"
+                    value={formData.cost_price}
+                    onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sotish narxi</label>
+                  <input
+                    type="number"
+                    value={formData.sale_price}
+                    onChange={(e) => setFormData({...formData, sale_price: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Narx (so'm)</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Narxni kiriting"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Miqdor</label>
+                  <input
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Kam qolish chegarasi</label>
+                  <input
+                    type="number"
+                    value={formData.low_stock_threshold}
+                    onChange={(e) => setFormData({...formData, low_stock_threshold: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
               </div>
               
               <div className="flex gap-3 pt-4">
@@ -452,7 +558,7 @@ const Warehouse = () => {
                 </button>
                 <button
                   onClick={handleEditProduct}
-                  disabled={!formData.name || !formData.quantity || !formData.price}
+                  disabled={!formData.name || !formData.quantity || !formData.sale_price || !formData.category}
                   className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Yangilash
@@ -534,8 +640,8 @@ const Warehouse = () => {
               
               <div className="max-h-80 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                 {categories.map((cat) => (
-                  <div key={cat} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-white transition-all">
-                    {editingCategory === cat ? (
+                  <div key={cat.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-white transition-all">
+                    {editingCategory?.id === cat.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <input
                           type="text"
@@ -553,7 +659,7 @@ const Warehouse = () => {
                       </div>
                     ) : (
                       <>
-                        <span className="text-sm font-semibold text-gray-700">{cat}</span>
+                        <span className="text-sm font-semibold text-gray-700">{cat.name} ({cat.product_count})</span>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleStartEdit(cat)}
@@ -590,7 +696,7 @@ const Warehouse = () => {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Kategoriyani o'chirish?</h3>
               <p className="text-sm text-gray-400 mb-8 leading-relaxed">
-                <span className="font-bold text-gray-900">"{categoryToDelete}"</span> kategoriyasini o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.
+                <span className="font-bold text-gray-900">"{categoryToDelete?.name}"</span> kategoriyasini o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.
               </p>
               <div className="flex gap-3">
                 <button

@@ -56,16 +56,33 @@ const Login = () => {
       return;
     }
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      if (isDefaultCredentials) {
-        login();
-        navigate('/');
-      } else {
-        setErrors({ general: 'Noto\'g\'ri telefon raqam yoki parol' });
+    // Actual API call
+    try {
+      const cleanPhone = formData.phone.replace(/\s/g, '');
+      await login({
+        phone: cleanPhone,
+        password: formData.password
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Login error full:', error.response?.data);
+      
+      // Serverdan kelgan xabarni olish (Django default xabarlari uchun)
+      const serverError = error.response?.data;
+      let errorMessage = 'Noto\'g\'ri telefon raqam yoki parol';
+      
+      if (serverError) {
+        if (typeof serverError === 'string') errorMessage = serverError;
+        else if (serverError.detail) errorMessage = serverError.detail;
+        else if (serverError.non_field_errors) errorMessage = serverError.non_field_errors[0];
+        else if (serverError.phone) errorMessage = `Telefon: ${serverError.phone[0]}`;
+        else if (serverError.password) errorMessage = `Parol: ${serverError.password[0]}`;
       }
-    }, 1500);
+
+      setErrors({ general: errorMessage });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatPhoneNumber = (value) => {
