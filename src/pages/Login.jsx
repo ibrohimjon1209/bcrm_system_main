@@ -97,9 +97,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-white relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-50 to-white relative overflow-hidden">
       {/* Decorative blurred shapes */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-purple-200 rounded-full blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute top-0 left-0 w-64 h-64 bg-blue-200 rounded-full blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl opacity-30 translate-x-1/3 translate-y-1/3" />
       
       {/* Main content */}
@@ -109,7 +109,7 @@ const Login = () => {
           {/* Header Section */}
           <div className="text-center mb-10">
             {/* Logo */}
-            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
               <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-11c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm6 0c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm-3 7c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/>
               </svg>
@@ -129,7 +129,7 @@ const Login = () => {
             <div>
               <div className={`relative transition-all duration-300 ${errors.phone ? 'transform scale-105' : ''}`}>
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FiPhone className={`w-5 h-5 ${errors.phone ? 'text-red-500' : 'text-gray-400'} transition-colors`} />
+                  <FiPhone className={`w-5 h-5 ${errors.phone ? 'text-blue-500' : 'text-gray-400'} transition-colors`} />
                 </div>
                 <input
                   type="tel"
@@ -141,15 +141,15 @@ const Login = () => {
                     if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
                   }}
                   placeholder="+998 XX XXX XX XX"
-                  className={`block w-full pl-12 pr-4 py-3.5 bg-white border rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                  className={`block w-full pl-12 pr-4 py-3.5 bg-white border rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 ${
                     errors.phone 
-                      ? 'border-red-500 focus:ring-red-500' 
+                      ? 'border-blue-500 focus:ring-blue-500' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 />
               </div>
               {errors.phone && (
-                <p className="mt-2 text-sm text-red-600 animate-fade-in">{errors.phone}</p>
+                <p className="mt-2 text-sm text-blue-600 animate-fade-in">{errors.phone}</p>
               )}
             </div>
 
@@ -157,7 +157,7 @@ const Login = () => {
             <div>
               <div className={`relative transition-all duration-300 ${errors.password ? 'transform scale-105' : ''}`}>
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FiLock className={`w-5 h-5 ${errors.password ? 'text-red-500' : 'text-gray-400'} transition-colors`} />
+                  <FiLock className={`w-5 h-5 ${errors.password ? 'text-blue-500' : 'text-gray-400'} transition-colors`} />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -165,9 +165,9 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Parol"
-                  className={`block w-full pl-12 pr-12 py-3.5 bg-white border rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                  className={`block w-full pl-12 pr-12 py-3.5 bg-white border rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 ${
                     errors.password 
-                      ? 'border-red-500 focus:ring-red-500' 
+                      ? 'border-blue-500 focus:ring-blue-500' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 />
@@ -180,7 +180,7 @@ const Login = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-2 text-sm text-red-600 animate-fade-in">{errors.password}</p>
+                <p className="mt-2 text-sm text-blue-600 animate-fade-in">{errors.password}</p>
               )}
             </div>
 
@@ -189,13 +189,13 @@ const Login = () => {
               <label className="flex items-center">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 text-purple-600 bg-white border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                  className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
                 <span className="ml-2 text-sm text-gray-600">Eslab qolish</span>
               </label>
               <button
                 type="button"
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
               >
                 Parolni unutdingizmi?
               </button>
@@ -203,8 +203,8 @@ const Login = () => {
 
             {/* General Error */}
             {errors.general && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center animate-fade-in">
-                <p className="text-sm text-red-600">{errors.general}</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center animate-fade-in">
+                <p className="text-sm text-blue-600">{errors.general}</p>
               </div>
             )}
 
@@ -212,7 +212,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-blue-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -229,8 +229,8 @@ const Login = () => {
           </form>
 
           {/* Default Credentials Info */}
-          <div className="mt-8 bg-purple-50 border border-purple-200 rounded-xl p-4">
-            <p className="text-xs text-purple-700 text-center">
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-xs text-blue-700 text-center">
               <span className="font-semibold">Default login:</span><br/>
               Telefon: +998 11 111 11 11<br/>
               Parol: nsdadmin123

@@ -16,7 +16,7 @@ const Navbar = () => {
     { 
       path: '/', 
       icon: FiHome, 
-      label: 'Dashboard',
+      label: 'Asosiy',
       id: 'dashboard'
     },
     { 
@@ -86,14 +86,14 @@ const Navbar = () => {
                       transition-all duration-300 ease-out
                       ${isCTA ? 'w-12 h-12' : 'w-10 h-10'}
                       ${isActive 
-                        ? 'text-purple-600 scale-110' 
+                        ? 'text-blue-600 scale-110' 
                         : 'text-gray-400 hover:text-gray-600'
                       }
                     `}
                   >
                     {/* Icon background glow for active state */}
                     {isActive && (
-                      <div className="absolute inset-0 bg-purple-100 rounded-2xl blur-xl opacity-60" />
+                      <div className="absolute inset-0 bg-blue-100 rounded-2xl blur-xl opacity-60" />
                     )}
                     
                     <Icon 
@@ -111,7 +111,7 @@ const Navbar = () => {
                     className={`
                       mt-1 font-medium transition-all duration-300 text-[10px]
                       ${isActive 
-                        ? 'text-purple-600 opacity-100 translate-y-0' 
+                        ? 'text-blue-600 opacity-100 translate-y-0' 
                         : 'text-gray-400 opacity-70 translate-y-0.5'
                       }
                     `}
