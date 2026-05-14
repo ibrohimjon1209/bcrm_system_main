@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://apibcrm.nsdcorporation.uz';
 
@@ -9,10 +10,14 @@ const api = axios.create({
   },
 });
 
+// Helper to get tokens
+const getAccessToken = () => localStorage.getItem('access_token');
+const getRefreshToken = () => localStorage.getItem('refresh_token');
+
 // Add a request interceptor to include the access token in headers
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -23,27 +28,32 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle token refresh
+// Add a response interceptor to handle token refresh and errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Show success message for mutations (POST, PUT, PATCH, DELETE) if needed
+    // Usually handled at the component/hook level for more control
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    const { response } = error;
 
     // If the error is 401 and not already retried
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/api/auth/login/')) {
       originalRequest._retry = true;
 
       try {
-        const refresh = localStorage.getItem('refresh_token');
+        const refresh = getRefreshToken();
         if (!refresh) {
           throw new Error('No refresh token available');
         }
 
-        const response = await axios.post(`${API_URL}/api/auth/refresh/`, {
+        const refreshResponse = await axios.post(`${API_URL}/api/auth/refresh/`, {
           refresh: refresh,
         });
 
-        const { access, refresh: newRefresh } = response.data;
+        const { access, refresh: newRefresh } = refreshResponse.data;
         localStorage.setItem('access_token', access);
         if (newRefresh) {
           localStorage.setItem('refresh_token', newRefresh);
@@ -57,9 +67,25 @@ api.interceptors.response.use(
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        
+        // Only redirect if not already on login page to avoid loops
+        if (!window.location.pathname.includes('/login')) {
+          toast.error('Seans muddati tugadi. Iltimos, qaytadan kiring.');
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
+    }
+
+    // Professional Error Handling
+    const errorMessage = response?.data?.detail || 
+                        response?.data?.message || 
+                        (response?.data && typeof response.data === 'object' ? Object.values(response.data).flat()[0] : null) ||
+                        'Xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.';
+
+    // Don't show toast for 401 as it's handled above
+    if (response?.status !== 401) {
+      toast.error(errorMessage);
     }
 
     return Promise.reject(error);

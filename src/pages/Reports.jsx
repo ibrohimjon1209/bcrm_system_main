@@ -1,168 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FiTrendingUp, FiDollarSign, FiShoppingCart, FiCreditCard,
   FiDownload, FiCalendar, FiPackage, FiUser, FiArrowUpRight,
-  FiArrowDownRight, FiPieChart, FiBarChart2
+  FiArrowDownRight, FiBarChart2, FiLoader
 } from 'react-icons/fi';
+import { useDashboardStats } from '../hooks/useReports';
 
 const Reports = () => {
   const [dateFilter, setDateFilter] = useState('7 kun');
-  const [reportData, setReportData] = useState({
-    revenue: 0,
-    profit: 0,
-    salesCount: 0,
-    debt: 0,
-    dailySales: [],
-    topProducts: [],
-    topCustomers: []
-  });
+  
+  // Map UI filter to API period
+  const filterMap = {
+    'Bugun': 'today',
+    '7 kun': '7kun',
+    '30 kun': 'oylik',
+    'Yil': 'yillik'
+  };
 
-  // Mock data generation based on filter
-  useEffect(() => {
-    const generateData = () => {
-      if (dateFilter === 'Bugun') {
-        return {
-          revenue: 150000,
-          revenueTrend: 5.2,
-          profit: 45000,
-          profitTrend: 3.1,
-          salesCount: 12,
-          salesTrend: 15.4,
-          debt: 20000,
-          debtTrend: -2.1,
-          dailySales: [
-            { date: '08:00', amount: 15000 },
-            { date: '10:00', amount: 25000 },
-            { date: '12:00', amount: 45000 },
-            { date: '14:00', amount: 30000 },
-            { date: '16:00', amount: 20000 },
-            { date: '18:00', amount: 15000 },
-          ],
-          topProducts: [
-            { name: 'Folga balon', quantity: 5, revenue: 75000, trend: 'up' },
-            { name: 'Geliy xizmat', quantity: 3, revenue: 60000, trend: 'up' },
-          ],
-          topCustomers: [
-            { name: 'Azizov Olim', spent: 45000, orders: 1 },
-          ]
-        };
-      }
-
-      if (dateFilter === '7 kun') {
-        return {
-          revenue: 1250000,
-          revenueTrend: 12.5,
-          profit: 450000,
-          profitTrend: 8.2,
-          salesCount: 85,
-          salesTrend: -2.4,
-          debt: 120000,
-          debtTrend: 5.1,
-          dailySales: [
-            { date: '18.05', amount: 160000 },
-            { date: '19.05', amount: 120000 },
-            { date: '20.05', amount: 190000 },
-            { date: '21.05', amount: 280000 },
-            { date: '22.05', amount: 150000 },
-            { date: '23.05', amount: 220000 },
-            { date: '24.05', amount: 180000 },
-          ],
-          topProducts: [
-            { name: 'Folga balon', quantity: 25, revenue: 375000, trend: 'up' },
-            { name: 'Katta figurniy balon', quantity: 18, revenue: 450000, trend: 'up' },
-            { name: 'Geliy xizmat', quantity: 12, revenue: 240000, trend: 'down' },
-            { name: 'Bezak to\'plami', quantity: 15, revenue: 120000, trend: 'up' },
-          ],
-          topCustomers: [
-            { name: 'Ali Valiyev', spent: 320000, orders: 12 },
-            { name: 'Bekzod Karimov', spent: 280000, orders: 8 },
-            { name: 'Dilnoza Azizova', spent: 195000, orders: 5 },
-          ]
-        };
-      }
-
-      if (dateFilter === '30 kun') {
-        return {
-          revenue: 5400000,
-          revenueTrend: 18.2,
-          profit: 1850000,
-          profitTrend: 14.5,
-          salesCount: 340,
-          salesTrend: 9.8,
-          debt: 450000,
-          debtTrend: 12.3,
-          dailySales: Array.from({ length: 15 }, (_, i) => ({
-            date: `${i + 10}.05`,
-            amount: Math.floor(Math.random() * 200000) + 100000
-          })),
-          topProducts: [
-            { name: 'Katta figurniy balon', quantity: 95, revenue: 2375000, trend: 'up' },
-            { name: 'Folga balon', quantity: 82, revenue: 1230000, trend: 'up' },
-            { name: 'Geliy xizmat', quantity: 45, revenue: 900000, trend: 'up' },
-            { name: 'Mini figuralar', quantity: 120, revenue: 600000, trend: 'down' },
-          ],
-          topCustomers: [
-            { name: 'Jamshid Tolipov', spent: 850000, orders: 24 },
-            { name: 'Sardor Rahimov', spent: 620000, orders: 15 },
-            { name: 'Guli Karimova', spent: 480000, orders: 11 },
-          ]
-        };
-      }
-
-      // Default for 'Yil' or others
-      return {
-        revenue: 48500000,
-        revenueTrend: 24.8,
-        profit: 15200000,
-        profitTrend: 21.2,
-        salesCount: 2450,
-        salesTrend: 18.5,
-        debt: 2100000,
-        debtTrend: 8.4,
-        dailySales: [
-          { date: 'Yan', amount: 3200000 },
-          { date: 'Feb', amount: 2800000 },
-          { date: 'Mar', amount: 4500000 },
-          { date: 'Apr', amount: 5200000 },
-          { date: 'May', amount: 3800000 },
-          { date: 'Iyun', amount: 4100000 },
-        ],
-        topProducts: [
-          { name: 'Katta figurniy balon', quantity: 850, revenue: 21250000, trend: 'up' },
-          { name: 'Folga balon', quantity: 720, revenue: 10800000, trend: 'up' },
-          { name: 'Geliy xizmat', quantity: 410, revenue: 8200000, trend: 'up' },
-        ],
-        topCustomers: [
-          { name: 'Event Agency LLC', spent: 8500000, orders: 145 },
-          { name: 'Happy Kids Center', spent: 4200000, orders: 62 },
-        ]
-      };
-    };
-
-    setReportData(generateData());
-  }, [dateFilter]);
+  const { data: stats, isLoading } = useDashboardStats(filterMap[dateFilter]);
 
   const summaryCards = [
     {
       title: 'Umumiy Tushum',
-      value: reportData.revenue,
-      trend: reportData.revenueTrend,
+      value: stats?.total_revenue || 0,
+      trend: stats?.revenue_trend || 0,
       icon: FiDollarSign,
       color: 'from-blue-600 to-blue-700',
       shadow: 'shadow-blue-200'
     },
     {
       title: 'Sof Foyda',
-      value: reportData.profit,
-      trend: reportData.profitTrend,
+      value: stats?.total_profit || 0,
+      trend: stats?.profit_trend || 0,
       icon: FiTrendingUp,
       color: 'from-blue-500 to-teal-600',
       shadow: 'shadow-blue-200'
     },
     {
       title: 'Sotuvlar Soni',
-      value: reportData.salesCount,
-      trend: reportData.salesTrend,
+      value: stats?.total_sales_count || 0,
+      trend: stats?.sales_trend || 0,
       icon: FiShoppingCart,
       color: 'from-blue-500 to-blue-600',
       shadow: 'shadow-blue-200',
@@ -170,8 +47,8 @@ const Reports = () => {
     },
     {
       title: 'Qarzdorlik',
-      value: reportData.debt,
-      trend: reportData.debtTrend,
+      value: stats?.total_debt || 0,
+      trend: stats?.debt_trend || 0,
       icon: FiCreditCard,
       color: 'from-blue-500 to-pink-600',
       shadow: 'shadow-blue-200'
@@ -179,7 +56,7 @@ const Reports = () => {
   ];
 
   const formatNumber = (num) => {
-    return num.toLocaleString('uz-UZ');
+    return parseFloat(num || 0).toLocaleString('uz-UZ');
   };
 
   const handleExport = (type) => {
@@ -195,7 +72,10 @@ const Reports = () => {
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Hisobotlar Markazi</h1>
             <p className="text-sm text-gray-500">Do'koningiz faoliyati haqida tahlillar</p>
           </div>
-          <button className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-gray-100 transition-colors">
+          <button 
+            onClick={() => handleExport('pdf')}
+            className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+          >
             <FiDownload className="w-5 h-5" />
           </button>
         </div>
@@ -220,277 +100,230 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {summaryCards.map((card, index) => {
-            const Icon = card.icon;
-            const colors = [
-              { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
-              { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
-              { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100' },
-              { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' }
-            ];
-            const theme = colors[index % colors.length];
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <FiLoader className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        ) : (
+          <>
+            {/* Summary Cards */}
+            <div className="px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              {summaryCards.map((card, index) => {
+                const Icon = card.icon;
+                const colors = [
+                  { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
+                  { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
+                  { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100' },
+                  { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' }
+                ];
+                const theme = colors[index % colors.length];
 
-            return (
-              <div
-                key={index}
-                className={`bg-white rounded-3xl p-6 shadow-sm border ${theme.border} relative overflow-hidden group hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 hover:-translate-y-1`}
-              >
-                <div className="flex items-center gap-5 relative z-10">
-                  <div className={`w-14 h-14 shrink-0 ${theme.bg} ${theme.text} rounded-2xl flex items-center justify-center shadow-sm`}>
-                    <Icon className="w-7 h-7" />
+                return (
+                  <div
+                    key={index}
+                    className={`bg-white rounded-3xl p-6 shadow-sm border ${theme.border} relative overflow-hidden group hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 hover:-translate-y-1`}
+                  >
+                    <div className="flex items-center gap-5 relative z-10">
+                      <div className={`w-14 h-14 shrink-0 ${theme.bg} ${theme.text} rounded-2xl flex items-center justify-center shadow-sm`}>
+                        <Icon className="w-7 h-7" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1 truncate">{card.title}</p>
+                        <h2 className="text-xl font-bold text-gray-900 leading-tight mb-1 truncate">
+                          {formatNumber(card.value)}
+                        </h2>
+                        <div className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold ${card.trend >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                          }`}>
+                          {card.trend >= 0 ? <FiArrowUpRight className="mr-0.5" /> : <FiArrowDownRight className="mr-0.5" />}
+                          {Math.abs(card.trend)}%
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="min-w-0">
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1 truncate">{card.title}</p>
-                    <h2 className="text-xl font-bold text-gray-900 leading-tight mb-1 truncate">
-                      {formatNumber(card.value)}
-                    </h2>
-                    <div className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold ${card.trend >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'
-                      }`}>
-                      {card.trend >= 0 ? <FiArrowUpRight className="mr-0.5" /> : <FiArrowDownRight className="mr-0.5" />}
-                      {Math.abs(card.trend)}%
+            {/* Charts Section */}
+            <div className="px-6 mb-10">
+              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-hidden relative">
+                <div className="flex items-center justify-between mb-10">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Sotuvlar Dinamikasi</h3>
+                    <p className="text-sm text-gray-400 mt-1">Kunlik o'sish ko'rsatkichi</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                      <span className="text-xs font-semibold text-blue-700">Tushum</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Subtle Background Accent */}
-                <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${theme.bg} rounded-full opacity-30 group-hover:scale-150 transition-transform duration-700`} />
-              </div>
-            );
-          })}
-        </div>
+                <div className="relative h-64 w-full">
+                  {stats?.daily_chart?.length > 0 ? (
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
+                          <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
 
-        {/* Charts Section */}
-        <div className="px-6 mb-10">
-          <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-hidden relative">
-            <div className="flex items-center justify-between mb-10">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Sotuvlar Dinamikasi</h3>
-                <p className="text-sm text-gray-400 mt-1">Kunlik o'sish ko'rsatkichi</p>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                  <span className="text-xs font-semibold text-blue-700">Tushum</span>
+                      {[0, 25, 50, 75, 100].map((tick) => (
+                        <line
+                          key={tick}
+                          x1="0" y1={tick} x2="100" y2={tick}
+                          stroke="#f1f5f9" strokeWidth="0.5"
+                        />
+                      ))}
+
+                      <path
+                        d={`
+                          M 0 100
+                          ${stats.daily_chart.map((sale, i) => {
+                          const x = (i / (stats.daily_chart.length - 1)) * 100;
+                          const maxAmount = Math.max(...stats.daily_chart.map(s => s.amount)) || 1;
+                          const y = 100 - (sale.amount / maxAmount) * 80;
+                          return `L ${x} ${y}`;
+                        }).join(' ')}
+                          L 100 100
+                          Z
+                        `}
+                        fill="url(#chartGradient)"
+                        className="transition-all duration-1000 ease-in-out"
+                      />
+
+                      <path
+                        d={`
+                          M 0 ${100 - (stats.daily_chart[0].amount / (Math.max(...stats.daily_chart.map(s => s.amount)) || 1)) * 80}
+                          ${stats.daily_chart.map((sale, i) => {
+                          const x = (i / (stats.daily_chart.length - 1)) * 100;
+                          const maxAmount = Math.max(...stats.daily_chart.map(s => s.amount)) || 1;
+                          const y = 100 - (sale.amount / maxAmount) * 80;
+                          return `L ${x} ${y}`;
+                        }).join(' ')}
+                        `}
+                        fill="none"
+                        stroke="#2563eb"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                      <FiBarChart2 className="w-12 h-12 mb-2 opacity-20" />
+                      <span className="text-sm font-medium">Grafik uchun ma'lumot yetarli emas</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
 
-            <div className="relative h-64 w-full">
-              {reportData.dailySales.length > 0 ? (
-                <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
-                      <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
+                {/* X-Axis Labels */}
+                <div className="relative mt-6 h-6 w-full">
+                  {stats?.daily_chart?.map((sale, i) => {
+                    const totalPoints = stats.daily_chart.length;
+                    const interval = Math.ceil(totalPoints / 6);
+                    if (i % interval !== 0 && i !== totalPoints - 1) return null;
 
-                  {/* Grid Lines */}
-                  {[0, 25, 50, 75, 100].map((tick) => (
-                    <line
-                      key={tick}
-                      x1="0" y1={tick} x2="100" y2={tick}
-                      stroke="#f1f5f9" strokeWidth="0.5"
-                    />
-                  ))}
-
-                  {/* Area Path */}
-                  <path
-                    d={`
-                      M 0 100
-                      ${reportData.dailySales.map((sale, i) => {
-                      const x = (i / (reportData.dailySales.length - 1)) * 100;
-                      const maxAmount = Math.max(...reportData.dailySales.map(s => s.amount)) || 1;
-                      const y = 100 - (sale.amount / maxAmount) * 80;
-                      return `L ${x} ${y}`;
-                    }).join(' ')}
-                      L 100 100
-                      Z
-                    `}
-                    fill="url(#chartGradient)"
-                    className="transition-all duration-1000 ease-in-out"
-                  />
-
-                  {/* Line Path */}
-                  <path
-                    d={`
-                      M ${(0 / (reportData.dailySales.length - 1)) * 100} ${100 - (reportData.dailySales[0].amount / (Math.max(...reportData.dailySales.map(s => s.amount)) || 1)) * 80}
-                      ${reportData.dailySales.map((sale, i) => {
-                      const x = (i / (reportData.dailySales.length - 1)) * 100;
-                      const maxAmount = Math.max(...reportData.dailySales.map(s => s.amount)) || 1;
-                      const y = 100 - (sale.amount / maxAmount) * 80;
-                      return `L ${x} ${y}`;
-                    }).join(' ')}
-                    `}
-                    fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="transition-all duration-1000 ease-in-out"
-                  />
-
-                  {/* Points and Tooltips */}
-                  {reportData.dailySales.map((sale, i) => {
-                    const x = (i / (reportData.dailySales.length - 1)) * 100;
-                    const maxAmount = Math.max(...reportData.dailySales.map(s => s.amount)) || 1;
-                    const y = 100 - (sale.amount / maxAmount) * 80;
                     return (
-                      <g key={i} className="group/point">
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="1.5"
-                          fill="white"
-                          stroke="#2563eb"
-                          strokeWidth="1"
-                          className="hover:r-2 transition-all duration-300 cursor-pointer"
-                        />
-                        {/* Invisible hover area */}
-                        <rect
-                          x={x - 5} y="0" width="10" height="100"
-                          fill="transparent"
-                          className="cursor-pointer"
-                        />
-                      </g>
+                      <span
+                        key={i}
+                        className="absolute text-[10px] font-semibold text-gray-400 uppercase tracking-tighter"
+                        style={{
+                          left: `${(i / (totalPoints - 1)) * 100}%`,
+                          transform: i === 0 ? 'none' : i === totalPoints - 1 ? 'translateX(-100%)' : 'translateX(-50%)'
+                        }}
+                      >
+                        {sale.date}
+                      </span>
                     );
                   })}
-                </svg>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
-                  <FiBarChart2 className="w-12 h-12 mb-2 opacity-20" />
-                  <span className="text-sm font-medium">Ma'lumotlar yuklanmoqda...</span>
                 </div>
-              )}
-            </div>
-
-            {/* X-Axis Labels */}
-            <div className="relative mt-6 h-6 w-full">
-              {reportData.dailySales.map((sale, i) => {
-                // Only show every Nth label to avoid overlapping
-                // Aim for ~6 labels max
-                const totalPoints = reportData.dailySales.length;
-                const interval = Math.ceil(totalPoints / 6);
-                const shouldShow = i % interval === 0 || i === totalPoints - 1;
-
-                if (!shouldShow) return null;
-
-                const leftPosition = (i / (totalPoints - 1)) * 100;
-
-                return (
-                  <span
-                    key={i}
-                    className="absolute text-[10px] font-semibold text-gray-400 uppercase tracking-tighter whitespace-nowrap transition-all duration-300"
-                    style={{
-                      left: `${leftPosition}%`,
-                      transform: i === 0 ? 'none' : i === totalPoints - 1 ? 'translateX(-100%)' : 'translateX(-50%)'
-                    }}
-                  >
-                    {sale.date}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Two Column Section */}
-        <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* Top Products */}
-          <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                <FiPackage className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-gray-900">Top Mahsulotlar</h3>
             </div>
 
-            <div className="space-y-4">
-              {reportData.topProducts.map((product, index) => (
-                <div key={index} className="flex items-center gap-4 group cursor-pointer">
-                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center font-bold text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                    {index + 1}
+            {/* Two Column Section */}
+            <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Top Products */}
+              <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                    <FiPackage className="w-5 h-5" />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-800 text-sm">{product.name}</h4>
-                    <p className="text-xs text-gray-400">{product.quantity} dona sotilgan</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 text-sm">{formatNumber(product.revenue)}</p>
-                    <p className={`text-[10px] font-semibold ${product.trend === 'up' ? 'text-blue-500' : 'text-blue-500'}`}>
-                      {product.trend === 'up' ? '+' : '-'}12%
-                    </p>
-                  </div>
+                  <h3 className="text-base font-bold text-gray-900">Top Mahsulotlar</h3>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Top Customers */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-gray-200/40 border border-white">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-700">
-                <FiUser className="w-5 h-5" />
+                <div className="space-y-4">
+                  {stats?.top_products?.map((product, index) => (
+                    <div key={index} className="flex items-center gap-4 group cursor-pointer">
+                      <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center font-bold text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 text-sm">{product.name}</h4>
+                        <p className="text-xs text-gray-400">{product.quantity} dona sotilgan</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900 text-sm">{formatNumber(product.revenue)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {(!stats?.top_products || stats.top_products.length === 0) && (
+                    <p className="text-center text-gray-400 py-4 text-sm">Ma'lumot mavjud emas</p>
+                  )}
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-gray-900">Top Mijozlar</h3>
-            </div>
 
-            <div className="space-y-4">
-              {reportData.topCustomers.map((customer, index) => (
-                <div key={index} className="flex items-center gap-4 group cursor-pointer">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-                    <img src={`https://ui-avatars.com/api/?name=${customer.name}&background=random&color=fff`} alt={customer.name} />
+              {/* Top Customers */}
+              <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-700">
+                    <FiUser className="w-5 h-5" />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-800 text-sm">{customer.name}</h4>
-                    <p className="text-xs text-gray-400">{customer.orders} ta buyurtma</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 text-sm">{formatNumber(customer.spent)}</p>
-                    <p className="text-[10px] font-semibold text-blue-500">+18.2%</p>
-                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Top Mijozlar</h3>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        {/* Export Buttons */}
-        <div className="px-4 grid grid-cols-2 gap-4 mb-12">
-          <button
-            onClick={() => handleExport('excel')}
-            className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-3xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-95"
-          >
-            <FiDownload className="w-5 h-5" />
-            Excel Export
-          </button>
-          <button
-            onClick={() => handleExport('pdf')}
-            className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-3xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-95"
-          >
-            <FiPieChart className="w-5 h-5" />
-            PDF Report
-          </button>
-        </div>
+                <div className="space-y-4">
+                  {stats?.top_customers?.map((customer, index) => (
+                    <div key={index} className="flex items-center gap-4 group cursor-pointer">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+                        <img src={`https://ui-avatars.com/api/?name=${customer.name}&background=random&color=fff`} alt={customer.name} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 text-sm">{customer.name}</h4>
+                        <p className="text-xs text-gray-400">{customer.orders} ta buyurtma</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900 text-sm">{formatNumber(customer.spent)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {(!stats?.top_customers || stats.top_customers.length === 0) && (
+                    <p className="text-center text-gray-400 py-4 text-sm">Ma'lumot mavjud emas</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Empty State */}
+            {stats?.total_revenue === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 px-6">
+                <div className="w-32 h-32 bg-gray-100 rounded-[3rem] flex items-center justify-center mb-6">
+                  <FiCalendar className="w-16 h-16 text-gray-300" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Hozircha ma'lumot yo'q</h3>
+                  <p className="text-gray-500 max-w-[200px] mx-auto text-sm">
+                    Tanlangan muddat uchun sotuv ma'lumotlari topilmadi.
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      {/* Empty State Logic Check */}
-      {reportData.revenue === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 px-6">
-          <div className="w-32 h-32 bg-gray-100 rounded-[3rem] flex items-center justify-center mb-6 animate-pulse">
-            <FiCalendar className="w-16 h-16 text-gray-300" />
-          </div>
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Hozircha ma'lumot yo'q</h3>
-            <p className="text-gray-500 max-w-[200px] mx-auto text-sm">
-              Tanlangan muddat uchun sotuv ma'lumotlari topilmadi.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "@tanstack/react-query": "^5.100.10",
     "autoprefixer": "^10.5.0",
     "axios": "^1.16.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
+    "lucide-react": "^1.16.0",
     "postcss": "^8.5.13",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -24,7 +28,9 @@
     "react-toastify": "^11.1.0",
     "recharts": "^2.15.4",
     "swiper": "^12.1.4",
-    "tailwindcss": "^4.2.4"
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

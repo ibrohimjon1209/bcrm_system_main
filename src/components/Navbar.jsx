@@ -6,7 +6,7 @@ import {
   FiPackage, 
   FiUsers, 
   FiBarChart2, 
-  FiMoreHorizontal 
+  FiTruck 
 } from 'react-icons/fi';
 
 const Navbar = () => {
@@ -32,6 +32,12 @@ const Navbar = () => {
       id: 'warehouse'
     },
     { 
+      path: '/purchases', 
+      icon: FiTruck, 
+      label: 'Xarid',
+      id: 'purchases'
+    },
+    { 
       path: '/customers', 
       icon: FiUsers, 
       label: 'Mijozlar',
@@ -42,12 +48,6 @@ const Navbar = () => {
       icon: FiBarChart2, 
       label: 'Hisobot',
       id: 'reports'
-    },
-    { 
-      path: '/more', 
-      icon: FiMoreHorizontal, 
-      label: "Ko'proq",
-      id: 'more'
     },
   ];
 
