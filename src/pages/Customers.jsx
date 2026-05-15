@@ -9,6 +9,7 @@ import {
 import { FiSend } from 'react-icons/fi';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '../hooks/useCustomers';
 import { toast } from 'react-toastify';
+import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
 const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   const handleDragEnd = (event, info) => {
@@ -64,18 +65,18 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center">
-          <div>
-            <span className="text-[11px] text-slate-400 block mb-0.5">Qarz holati:</span>
-            <span className={`text-[13px] font-bold px-2 py-0.5 rounded-md ${parseFloat(customer.total_debt) > 0 ? 'text-red-500 bg-red-50' : 'text-blue-500 bg-blue-50'}`}>
-              {parseFloat(customer.total_debt).toLocaleString()} so'm qarz
-            </span>
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="text-[11px] text-slate-400 block mb-0.5">Qarz holati:</span>
+              <span className={`text-[13px] font-bold px-2 py-0.5 rounded-md ${parseFloat(customer.debt || 0) > 0 ? 'text-red-500 bg-red-50' : 'text-blue-500 bg-blue-50'}`}>
+                {parseFloat(customer.debt || 0).toLocaleString()} so'm qarz
+              </span>
+            </div>
+            <div className="text-right">
+               <span className="text-[11px] text-slate-400 block mb-0.5">Jami xarid:</span>
+               <span className="text-[13px] font-bold text-slate-700">{parseFloat(customer.total_spent || 0).toLocaleString()} so'm</span>
+            </div>
           </div>
-          <div className="text-right">
-             <span className="text-[11px] text-slate-400 block mb-0.5">Jami harid:</span>
-             <span className="text-[13px] font-bold text-slate-700">{parseFloat(customer.total_purchase).toLocaleString()} so'm</span>
-          </div>
-        </div>
       </motion.div>
     </div>
   );
@@ -112,11 +113,11 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
             <div className="w-full grid grid-cols-2 gap-4 mt-2">
                <div className="bg-slate-50 rounded-2xl p-4 text-center">
                   <span className="text-xs text-slate-500 block mb-1">Jami xaridlar</span>
-                  <span className="font-bold text-slate-700">{parseFloat(customer.total_purchase).toLocaleString()}</span>
+                  <span className="font-bold text-slate-700">{parseFloat(customer.total_spent || 0).toLocaleString()}</span>
                </div>
-               <div className={`rounded-2xl p-4 text-center ${parseFloat(customer.total_debt) === 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
-                  <span className={`text-xs block mb-1 ${parseFloat(customer.total_debt) === 0 ? 'text-blue-600' : 'text-red-600'}`}>Joriy qarz</span>
-                  <span className={`font-bold ${parseFloat(customer.total_debt) === 0 ? 'text-blue-600' : 'text-red-600'}`}>{parseFloat(customer.total_debt).toLocaleString()} so'm</span>
+               <div className={`rounded-2xl p-4 text-center ${parseFloat(customer.debt || 0) === 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
+                  <span className={`text-xs block mb-1 ${parseFloat(customer.debt || 0) === 0 ? 'text-blue-600' : 'text-red-600'}`}>Joriy qarz</span>
+                  <span className={`font-bold ${parseFloat(customer.debt || 0) === 0 ? 'text-blue-600' : 'text-red-600'}`}>{parseFloat(customer.debt || 0).toLocaleString()} so'm</span>
                </div>
             </div>
         </div>
@@ -144,9 +145,14 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <button className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 transition-colors shadow-sm">
-               <FiMessageCircle /> SMS yuborish
-            </button>
+            <a 
+              href={`https://t.me/${customer.phone?.startsWith('+') ? customer.phone : '+' + customer.phone}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+               <FiMessageCircle /> Telegram
+            </a>
             <button 
               onClick={onViewReceipt}
               className="bg-slate-800 hover:bg-slate-900 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 transition-colors shadow-sm">
@@ -162,14 +168,20 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
 const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }) => {
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
-    phone: initialData?.phone || '',
+    phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',
     address: initialData?.address || '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if(formData.name && formData.phone) {
-      onSave(formData);
+    if(formData.name && formData.phone && formData.phone !== '+998') {
+      const cleanData = {
+        ...formData,
+        phone: cleanPhoneNumber(formData.phone)
+      };
+      onSave(cleanData);
+    } else {
+      toast.error('Ma\'lumotlarni to\'liq kiriting');
     }
   }
 
@@ -199,7 +211,15 @@ const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }) => {
             </div>
             <div>
               <label className="text-sm font-medium text-slate-500 block mb-1">Telefon</label>
-              <input required name="phone" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-slate-800 focus:outline-none focus:border-[#1D4ED8]" placeholder="+998 90 123 45 67" />
+              <input 
+                required 
+                name="phone" 
+                value={formData.phone} 
+                onChange={e => setFormData({...formData, phone: formatPhoneNumber(e.target.value)})} 
+                type="text" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-slate-800 focus:outline-none focus:border-[#1D4ED8]" 
+                placeholder="+998 90 123 45 67" 
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-500 block mb-1">Manzil</label>

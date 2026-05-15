@@ -29,7 +29,7 @@ const Purchases = () => {
     if (existing) {
       setCart(cart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
     } else {
-      setCart([...cart, { id: product.id, name: product.name, price: product.cost_price, quantity: 1 }]);
+      setCart([...cart, { id: product.id, name: product.name, price: parseFloat(product.cost_price || 0), quantity: 1 }]);
     }
   };
 
@@ -43,7 +43,7 @@ const Purchases = () => {
     }).filter(item => item.quantity > 0));
   };
 
-  const getTotal = () => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const getTotal = () => cart.reduce((sum, item) => sum + (parseFloat(item.price || 0) * item.quantity), 0);
 
   const handleCompletePurchase = async () => {
     if (!selectedSupplier) {
@@ -60,8 +60,9 @@ const Purchases = () => {
       items: cart.map(item => ({
         product: item.id,
         quantity: item.quantity,
-        price: item.price
-      }))
+        cost_price: item.price
+      })),
+      note: ''
     };
 
     try {
@@ -110,7 +111,7 @@ const Purchases = () => {
                 </div>
                 <div className="text-right flex items-center gap-6">
                   <div>
-                    <p className="text-lg font-black text-gray-900">{parseFloat(purchase.total_amount).toLocaleString()} so'm</p>
+                    <p className="text-lg font-black text-gray-900">{parseFloat(purchase.total || 0).toLocaleString()} so'm</p>
                     <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Qabul qilindi</p>
                   </div>
                   <FiChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors w-6 h-6" />
@@ -191,7 +192,7 @@ const Purchases = () => {
                           <FiPackage />
                         </div>
                         <p className="text-[10px] font-bold text-gray-900 truncate text-center">{p.name}</p>
-                        <p className="text-[9px] text-blue-600 font-black text-center mt-1">{parseFloat(p.cost_price).toLocaleString()}</p>
+                        <p className="text-[9px] text-blue-600 font-black text-center mt-1">{parseFloat(p.cost_price || 0).toLocaleString()}</p>
                       </button>
                     ))}
                   </div>
@@ -206,7 +207,7 @@ const Purchases = () => {
                         <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm">
                           <div className="flex-1">
                             <p className="font-bold text-gray-900 text-sm">{item.name}</p>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{parseFloat(item.price).toLocaleString()} so'm</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{parseFloat(item.price || 0).toLocaleString()} so'm</p>
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="flex items-center bg-gray-50 rounded-xl p-1">
@@ -215,7 +216,7 @@ const Purchases = () => {
                               <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600"><FiPlus /></button>
                             </div>
                             <div className="text-right min-w-[100px]">
-                              <p className="text-sm font-black text-blue-600">{(item.price * item.quantity).toLocaleString()}</p>
+                              <p className="text-sm font-black text-blue-600">{(parseFloat(item.price || 0) * item.quantity).toLocaleString()}</p>
                             </div>
                           </div>
                         </div>

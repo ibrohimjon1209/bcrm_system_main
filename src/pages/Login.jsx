@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPhone, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    phone: '',
+    phone: '+998',
     password: ''
   });
   const [errors, setErrors] = useState({});
@@ -35,15 +36,15 @@ const Login = () => {
     setIsLoading(true);
     
     // Check for default credentials
-    const cleanPhone = formData.phone.replace(/\s/g, '');
+    const cleanPhone = cleanPhoneNumber(formData.phone);
     const isDefaultCredentials = cleanPhone === '+998111111111' && formData.password === 'nsdadmin123';
     
     // Simulate validation
     const newErrors = {};
-    if (!formData.phone) {
+    if (!formData.phone || formData.phone === '+998') {
       newErrors.phone = 'Telefon raqamni kiriting';
-    } else if (!/^\+998\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Telefon raqam noto\'g\'ri formatda';
+    } else if (cleanPhone.length < 13) {
+      newErrors.phone = 'Telefon raqam to\'liq emas';
     }
     
     if (!formData.password) {
@@ -58,7 +59,7 @@ const Login = () => {
     
     // Actual API call
     try {
-      const cleanPhone = formData.phone.replace(/\s/g, '');
+      const cleanPhone = cleanPhoneNumber(formData.phone);
       await login({
         phone: cleanPhone,
         password: formData.password
@@ -85,16 +86,7 @@ const Login = () => {
     }
   };
 
-  const formatPhoneNumber = (value) => {
-    const cleaned = value.replace(/\s/g, '');
-    if (cleaned.startsWith('+998')) {
-      const match = cleaned.match(/^\+998(\d{2})(\d{3})(\d{2})(\d{2})$/);
-      if (match) {
-        return `+998 ${match[1]} ${match[2]} ${match[3]} ${match[4]}`;
-      }
-    }
-    return value;
-  };
+  // Removed local formatPhoneNumber as we use the utility one
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-50 to-white relative overflow-hidden">

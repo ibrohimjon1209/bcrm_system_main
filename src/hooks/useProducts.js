@@ -9,6 +9,14 @@ export const useProducts = (params) => {
   });
 };
 
+export const useProduct = (id) => {
+  return useQuery({
+    queryKey: ['product', id],
+    queryFn: () => productService.getProduct(id),
+    enabled: !!id,
+  });
+};
+
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
   return useMutation({

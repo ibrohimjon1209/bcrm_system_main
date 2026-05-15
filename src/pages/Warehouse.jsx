@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FiSearch, FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiX, FiPackage, FiCheck, FiLoader } from 'react-icons/fi';
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '../hooks/useProducts';
+import { useProducts, useProduct, useCreateProduct, useUpdateProduct, useDeleteProduct, useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '../hooks/useProducts';
 
 const Warehouse = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +27,22 @@ const Warehouse = () => {
   // API Data
   const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm });
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
+  const { data: singleProduct, isLoading: productLoading } = useProduct(selectedProduct?.id);
+  
+  // Sync single product data to form when loaded
+  useEffect(() => {
+    if (singleProduct && showEditModal) {
+      console.log('Syncing fetched product data to form:', singleProduct);
+      setFormData({
+        name: singleProduct.name,
+        category: singleProduct.category?.toString() || '',
+        quantity: singleProduct.quantity.toString(),
+        sale_price: singleProduct.sale_price,
+        cost_price: singleProduct.cost_price || '',
+        unit: singleProduct.unit || 'dona'
+      });
+    }
+  }, [singleProduct, showEditModal]);
   
   // Mutations
   const createProductMutation = useCreateProduct();
@@ -76,6 +92,7 @@ const Warehouse = () => {
   };
 
   const handleEditProduct = async () => {
+    console.log('Editing product with data:', formData);
     try {
       await updateProductMutation.mutateAsync({
         id: selectedProduct.id,
@@ -102,6 +119,7 @@ const Warehouse = () => {
   };
 
   const openEditModal = (product) => {
+    console.log('Opening edit modal for product:', product);
     setSelectedProduct(product);
     setFormData({
       name: product.name,
@@ -265,14 +283,18 @@ const Warehouse = () => {
                   <h3 className="text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
                 </div>
 
-                <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-3 mb-4">
+                <div className="grid grid-cols-2 gap-2 bg-gray-50 rounded-2xl p-3 mb-4">
+                  <div className="col-span-2 flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
+                    <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider">Ombor qoldig'i</p>
+                    <p className="text-sm font-bold text-gray-900">{product.quantity} <span className="text-[10px] text-gray-400 font-normal">{product.unit || 'dona'}</span></p>
+                  </div>
                   <div>
-                    <p className="text-[9px] text-gray-400 font-semibold uppercase">Qoldiq</p>
-                    <p className="text-base font-bold text-gray-900">{product.quantity} <span className="text-[10px] text-gray-400">{product.unit || 'dona'}</span></p>
+                    <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider">Tan narx</p>
+                    <p className="text-xs font-bold text-gray-900">{parseFloat(product.cost_price || 0).toLocaleString()} <span className="text-[8px] text-gray-400 font-normal">so'm</span></p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] text-gray-400 font-semibold uppercase">Sotuv Narxi</p>
-                    <p className="text-base font-bold text-gray-900">{parseFloat(product.sale_price).toLocaleString()} <span className="text-[10px] text-gray-400">so'm</span></p>
+                    <p className="text-[9px] text-blue-600 font-semibold uppercase tracking-wider">Sotuv Narxi</p>
+                    <p className="text-xs font-bold text-gray-900">{parseFloat(product.sale_price || 0).toLocaleString()} <span className="text-[8px] text-gray-400 font-normal">so'm</span></p>
                   </div>
                 </div>
 
@@ -423,8 +445,15 @@ const Warehouse = () => {
             </div>
             
             <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mahsulot nomi</label>
+              {productLoading ? (
+                <div className="py-20 flex flex-col items-center justify-center text-gray-400">
+                  <FiLoader className="w-10 h-10 animate-spin mb-4" />
+                  <p className="text-sm font-medium">Ma'lumotlar yuklanmoqda...</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Mahsulot nomi</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -508,8 +537,10 @@ const Warehouse = () => {
                   {updateProductMutation.isPending && <FiLoader className="animate-spin" />}
                   Yangilash
                 </button>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
+          </div>
           </div>
         </div>
       )}

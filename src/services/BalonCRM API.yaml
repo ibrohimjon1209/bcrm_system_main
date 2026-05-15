@@ -1858,6 +1858,11 @@ components:
           format: decimal
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           title: Sotish narxi
+        cost_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          title: Sotib olish narxi
         quantity:
           type: integer
           title: Miqdor

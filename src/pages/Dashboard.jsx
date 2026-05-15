@@ -5,7 +5,7 @@ import { useSales } from '../hooks/useSales';
 
 const Dashboard = () => {
   const { data: stats, isLoading: statsLoading } = useDashboardStats('today');
-  const { data: recentSalesData, isLoading: salesLoading } = useSales({ limit: 5 });
+  const { data: recentSalesData, isLoading: salesLoading } = useSales({});
 
   const recentSales = recentSalesData?.results || [];
 
@@ -79,7 +79,7 @@ const Dashboard = () => {
               </div>
               <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">{card.title}</p>
               <h2 className="text-3xl font-black text-gray-900 mb-2">
-                {card.isCurrency === false ? card.value : `${parseFloat(card.value).toLocaleString()} so'm`}
+                {card.isCurrency === false ? card.value : `${parseFloat(card.value || 0).toLocaleString()} so'm`}
               </h2>
               <p className="text-sm font-medium text-gray-500">{card.sub}</p>
             </div>
@@ -129,13 +129,15 @@ const Dashboard = () => {
                       </td>
                       <td className="py-4 text-center">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                          sale.payment_method === 'NAQD' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'
+                          sale.payment_method === 'cash' ? 'bg-emerald-50 text-emerald-600' : 
+                          sale.payment_method === 'card' ? 'bg-blue-50 text-blue-600' :
+                          'bg-orange-50 text-orange-600'
                         }`}>
-                          {sale.payment_method}
+                          {sale.payment_method_display || sale.payment_method}
                         </span>
                       </td>
                       <td className="py-4 text-right">
-                        <p className="font-black text-gray-900 text-sm">{parseFloat(sale.final_amount).toLocaleString()} so'm</p>
+                        <p className="font-black text-gray-900 text-sm">{parseFloat(sale.total || 0).toLocaleString()} so'm</p>
                       </td>
                     </tr>
                   ))}

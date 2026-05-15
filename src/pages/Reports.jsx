@@ -162,7 +162,7 @@ const Reports = () => {
                 </div>
 
                 <div className="relative h-64 w-full">
-                  {stats?.daily_chart?.length > 0 ? (
+                  {stats?.daily_chart && stats.daily_chart.length > 1 ? (
                     <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                       <defs>
                         <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -212,6 +212,11 @@ const Reports = () => {
                         strokeLinejoin="round"
                       />
                     </svg>
+                  ) : stats?.daily_chart && stats.daily_chart.length === 1 ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-blue-600">
+                      <div className="text-4xl font-black mb-2">{formatNumber(stats.daily_chart[0].amount)}</div>
+                      <span className="text-sm font-medium text-gray-400">{stats.daily_chart[0].date} holatiga</span>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                       <FiBarChart2 className="w-12 h-12 mb-2 opacity-20" />

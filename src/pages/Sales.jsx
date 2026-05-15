@@ -9,7 +9,7 @@ const Sales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState([]);
-  const [paymentType, setPaymentType] = useState('NAQD');
+  const [paymentType, setPaymentType] = useState('cash');
   const [paidAmount, setPaidAmount] = useState('');
   const [showCompletion, setShowCompletion] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -44,7 +44,7 @@ const Sales = () => {
       setCart([...cart, { 
         id: product.id, 
         name: product.name, 
-        price: product.sale_price, 
+        price: parseFloat(product.sale_price || 0), 
         quantity: 1, 
         maxQuantity: product.quantity 
       }]);
@@ -71,7 +71,7 @@ const Sales = () => {
   };
 
   const getTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (parseFloat(item.price || 0) * item.quantity), 0);
   };
 
   const getRemainingDebt = () => {
@@ -90,7 +90,7 @@ const Sales = () => {
     const payload = {
       customer: selectedCustomer.id,
       payment_method: paymentType,
-      paid_amount: paymentType === 'NASIYA' ? 0 : (paidAmount ? parseFloat(paidAmount) : getTotal()),
+      paid_amount: paymentType === 'debt' ? 0 : (paidAmount ? parseFloat(paidAmount) : getTotal()),
       items: cart.map(item => ({
         product: item.id,
         quantity: item.quantity,
@@ -115,7 +115,7 @@ const Sales = () => {
     setShowReceipt(false);
     setCart([]);
     setPaidAmount('');
-    setPaymentType('NAQD');
+    setPaymentType('cash');
     setSelectedCustomer(null);
     setLastCreatedSale(null);
   };
@@ -137,7 +137,7 @@ const Sales = () => {
             </div>
             
             <div className="mb-8">
-              <p className="text-4xl font-bold text-gray-900">{parseFloat(lastCreatedSale?.final_amount || 0).toLocaleString()} so'm</p>
+              <p className="text-4xl font-bold text-gray-900">{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} so'm</p>
             </div>
             
             <p className="text-xl font-semibold text-gray-900 mb-8">Sotuv yakunlandi</p>
@@ -199,8 +199,8 @@ const Sales = () => {
                 <div key={item.id} className="grid grid-cols-4 gap-2 text-sm">
                   <div className="font-medium text-gray-900">{item.product_name}</div>
                   <div className="text-center text-gray-500">{item.quantity}</div>
-                  <div className="text-center text-gray-500">{parseFloat(item.price).toLocaleString()}</div>
-                  <div className="text-right font-bold text-gray-900">{(item.price * item.quantity).toLocaleString()}</div>
+                  <div className="text-center text-gray-500">{parseFloat(item.price || 0).toLocaleString()}</div>
+                  <div className="text-right font-bold text-gray-900">{(parseFloat(item.price || 0) * item.quantity).toLocaleString()}</div>
                 </div>
               ))}
             </div>
@@ -209,13 +209,13 @@ const Sales = () => {
           <div className="mb-6 border-t border-dashed border-gray-200 pt-4">
             <div className="flex justify-between text-lg font-bold text-gray-900">
               <span>Jami:</span>
-              <span>{parseFloat(lastCreatedSale?.final_amount || 0).toLocaleString()} so'm</span>
+              <span>{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} so'm</span>
             </div>
             <div className="flex justify-between text-sm text-gray-500 mt-1">
               <span>To'landi:</span>
               <span>{parseFloat(lastCreatedSale?.paid_amount || 0).toLocaleString()} so'm</span>
             </div>
-            {lastCreatedSale?.debt_amount > 0 && (
+            {parseFloat(lastCreatedSale?.debt_amount || 0) > 0 && (
               <div className="flex justify-between text-sm text-red-500 font-bold mt-1">
                 <span>Qarz:</span>
                 <span>{parseFloat(lastCreatedSale?.debt_amount || 0).toLocaleString()} so'm</span>
@@ -313,7 +313,7 @@ const Sales = () => {
                 
                 <h4 className="font-semibold text-gray-800 text-xs mb-1 truncate">{product.name}</h4>
                 <div className="flex items-center justify-between">
-                  <p className="text-blue-600 font-bold text-sm">{parseFloat(product.sale_price).toLocaleString()}</p>
+                  <p className="text-blue-600 font-bold text-sm">{parseFloat(product.sale_price || 0).toLocaleString()}</p>
                   <button className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <FiPlus className="w-3 h-3" />
                   </button>
@@ -379,15 +379,15 @@ const Sales = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'NAQD', label: 'Naqd' },
-                  { id: 'NASIYA', label: 'Nasiya' },
-                  { id: 'KARTA', label: 'Karta' }
+                  { id: 'cash', label: 'Naqd' },
+                  { id: 'debt', label: 'Nasiya' },
+                  { id: 'card', label: 'Karta' }
                 ].map((type) => (
                   <button
                     key={type.id}
                     onClick={() => {
                       setPaymentType(type.id);
-                      if (type.id === 'NASIYA') setPaidAmount('0');
+                      if (type.id === 'debt') setPaidAmount('0');
                       else setPaidAmount('');
                     }}
                     className={`py-3 px-4 rounded-xl font-bold text-sm transition-all ${
@@ -401,7 +401,7 @@ const Sales = () => {
                 ))}
               </div>
               
-              {paymentType !== 'NASIYA' && (
+              {paymentType !== 'debt' && (
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">To'langan summa (bo'sh bo'lsa to'liq to'langan hisoblanadi)</label>
                   <input
@@ -419,7 +419,7 @@ const Sales = () => {
                   <span>Jami:</span>
                   <span>{getTotal().toLocaleString()} so'm</span>
                 </div>
-                {paymentType !== 'NASIYA' && paidAmount && (
+                {paymentType !== 'debt' && paidAmount && (
                   <div className="flex justify-between text-sm font-bold">
                     <span className="text-gray-400">Qolgan qarz:</span>
                     <span className="text-red-500">{getRemainingDebt().toLocaleString()} so'm</span>

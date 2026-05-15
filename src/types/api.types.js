@@ -51,6 +51,7 @@
  * @property {number} id
  * @property {string} name
  * @property {string} category_name
+ * @property {string} cost_price
  * @property {string} sale_price
  * @property {number} quantity
  * @property {UnitEnum} unit
