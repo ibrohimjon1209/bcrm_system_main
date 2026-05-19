@@ -91,9 +91,9 @@ const Purchases = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] pb-32">
+    <div className="min-h-screen bg-[#F0F4FF] pb-32 md:pb-8">
       {/* Blue gradient header */}
-      <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-12 pb-8 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-8 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
         <div className="absolute top-12 -right-4 w-16 h-16 bg-white/5 rounded-full" />
         <div className="flex items-center justify-between">
@@ -110,7 +110,7 @@ const Purchases = () => {
         </div>
       </div>
 
-      <div className="px-4 py-4">
+      <div className="px-4 md:px-8 py-4 max-w-6xl mx-auto">
         {/* Search */}
         <div className="relative mb-4">
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -129,7 +129,7 @@ const Purchases = () => {
             <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />
           </div>
         ) : filteredPurchases.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredPurchases.map((purchase) => (
               <div
                 key={purchase.id}

@@ -43,51 +43,53 @@ const AppContent = () => {
   const { isAuthenticated } = useAuth();
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        } />
-        <Route path="/notification" element={
-          <ProtectedRoute>
-            <Notification />
-          </ProtectedRoute>
-        } />
-        <Route path="/sales" element={
-          <ProtectedRoute>
-            <Sales />
-          </ProtectedRoute>
-        } />
-        <Route path="/warehouse" element={
-          <ProtectedRoute>
-            <Warehouse />
-          </ProtectedRoute>
-        } />
-        <Route path="/customers" element={
-          <ProtectedRoute>
-            <Customers />
-          </ProtectedRoute>
-        } />
-        <Route path="/reports" element={
-          <ProtectedRoute>
-            <Reports />
-          </ProtectedRoute>
-        } />
-        <Route path="/purchases" element={
-          <ProtectedRoute>
-            <Purchases />
-          </ProtectedRoute>
-        } />
-        <Route path="/more" element={
-          <ProtectedRoute>
-            <div className="p-4 pb-32"><h1 className="text-2xl font-bold">Ko'proq</h1></div>
-          </ProtectedRoute>
-        } />
-      </Routes>
+    <div className="min-h-screen bg-gray-50 flex">
       {isAuthenticated && <Navbar />}
+      <main className={`flex-1 min-w-0 ${isAuthenticated ? 'md:ml-60' : ''}`}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/notification" element={
+            <ProtectedRoute>
+              <Notification />
+            </ProtectedRoute>
+          } />
+          <Route path="/sales" element={
+            <ProtectedRoute>
+              <Sales />
+            </ProtectedRoute>
+          } />
+          <Route path="/warehouse" element={
+            <ProtectedRoute>
+              <Warehouse />
+            </ProtectedRoute>
+          } />
+          <Route path="/customers" element={
+            <ProtectedRoute>
+              <Customers />
+            </ProtectedRoute>
+          } />
+          <Route path="/reports" element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          } />
+          <Route path="/purchases" element={
+            <ProtectedRoute>
+              <Purchases />
+            </ProtectedRoute>
+          } />
+          <Route path="/more" element={
+            <ProtectedRoute>
+              <div className="p-8"><h1 className="text-2xl font-bold">Ko'proq</h1></div>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </main>
     </div>
   );
 };

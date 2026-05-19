@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import {
   FiPlus, FiSearch, FiPhone, FiEdit,
   FiTrash2, FiMessageCircle, FiFileText, FiX, FiCheckCircle,
   FiMapPin, FiCalendar, FiCreditCard, FiShare2, FiLoader, FiUsers
 } from 'react-icons/fi';
 import { FiSend } from 'react-icons/fi';
-import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useGetBotLink, useUnlinkTelegram } from '../hooks/useCustomers';
+import { useCustomers, useDebtors, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useGetBotLink, useUnlinkTelegram } from '../hooks/useCustomers';
 import { toast } from 'react-toastify';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
@@ -25,39 +25,70 @@ const getStatusConfig = (customer) => {
   return statusConfig.FAOL;
 };
 
+const SWIPE_THRESHOLD = 75;
+
 const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   const sc = getStatusConfig(customer);
   const hasDebt = parseFloat(customer.debt || 0) > 0;
+  const x = useMotionValue(0);
+
+  const editOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
+  const deleteOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
+  const editScale = useTransform(x, [0, SWIPE_THRESHOLD], [0.7, 1]);
+  const deleteScale = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0.7]);
+
+  const snapBack = () => animate(x, 0, { type: 'spring', stiffness: 500, damping: 38, mass: 0.6 });
+
+  const handleDragEnd = (_, info) => {
+    if (info.offset.x > SWIPE_THRESHOLD) {
+      snapBack();
+      onEdit(customer);
+    } else if (info.offset.x < -SWIPE_THRESHOLD) {
+      snapBack();
+      onDelete(customer.id);
+    } else {
+      snapBack();
+    }
+  };
 
   return (
     <div className="relative mb-3 overflow-hidden rounded-2xl">
       {/* Swipe action backgrounds */}
-      <div className="absolute inset-0 flex justify-between items-center rounded-2xl">
-        <div className="w-1/3 h-full bg-gradient-to-r from-[#1447E6] to-blue-500 flex items-center justify-start pl-5 rounded-l-2xl">
-          <div
-            className="flex flex-col items-center cursor-pointer"
-            onClick={(e) => { e.stopPropagation(); onEdit(customer); }}
-          >
-            <div className="bg-white/20 p-2 rounded-full mb-1"><FiEdit className="text-white" /></div>
-            <span className="text-[10px] text-white font-medium">Tahrir</span>
-          </div>
-        </div>
-        <div className="w-1/3 h-full bg-gradient-to-l from-red-500 to-red-400 flex items-center justify-end pr-5 rounded-r-2xl">
-          <div
-            className="flex flex-col items-center cursor-pointer"
-            onClick={(e) => { e.stopPropagation(); onDelete(customer.id); }}
-          >
-            <div className="bg-white/20 p-2 rounded-full mb-1"><FiTrash2 className="text-white" /></div>
-            <span className="text-[10px] text-white font-medium">O'chirish</span>
-          </div>
-        </div>
+      <div className="absolute inset-0 flex justify-between items-center rounded-2xl pointer-events-none">
+        <motion.div
+          style={{ opacity: editOpacity }}
+          className="w-1/2 h-full bg-gradient-to-r from-[#1447E6] to-blue-400 flex items-center justify-start pl-6 rounded-l-2xl"
+        >
+          <motion.div style={{ scale: editScale }} className="flex flex-col items-center">
+            <div className="bg-white/20 p-2.5 rounded-full mb-1">
+              <FiEdit className="text-white w-4 h-4" />
+            </div>
+            <span className="text-[10px] text-white font-bold">Tahrir</span>
+          </motion.div>
+        </motion.div>
+        <motion.div
+          style={{ opacity: deleteOpacity }}
+          className="w-1/2 h-full bg-gradient-to-l from-red-500 to-red-400 flex items-center justify-end pr-6 rounded-r-2xl"
+        >
+          <motion.div style={{ scale: deleteScale }} className="flex flex-col items-center">
+            <div className="bg-white/20 p-2.5 rounded-full mb-1">
+              <FiTrash2 className="text-white w-4 h-4" />
+            </div>
+            <span className="text-[10px] text-white font-bold">O'chirish</span>
+          </motion.div>
+        </motion.div>
       </div>
 
       <motion.div
+        style={{ x }}
         drag="x"
         dragConstraints={{ left: -110, right: 110 }}
-        dragElastic={0.15}
-        className={`relative bg-white rounded-2xl shadow-sm border-l-4 ${sc.border} z-10 cursor-pointer active:cursor-grabbing`}
+        dragElastic={0.08}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd}
+        whileTap={{ cursor: 'grabbing' }}
+        transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+        className={`relative bg-white rounded-2xl shadow-sm border-l-4 ${sc.border} z-10 cursor-grab select-none`}
         onClick={() => onClick(customer)}
       >
         <div className="flex items-center gap-3 p-4">
@@ -443,20 +474,28 @@ const Customers = () => {
 
   const statusMap = {
     'Barchasi': null,
-    'Qarzdorlar': 'QARZDOR',
-    'Faol': 'FAOL',
-    'VIP': 'VIP'
+    'Faol': 'active',
+    'VIP': 'vip'
   };
 
-  const { data: customersData, isLoading } = useCustomers({
+  const isDebtorFilter = activeFilter === 'Qarzdorlar';
+
+  const { data: customersData, isLoading: customersLoading } = useCustomers({
     search: searchQuery,
     status: statusMap[activeFilter]
   });
+  const { data: debtorsData, isLoading: debtorsLoading } = useDebtors();
+
+  const isLoading = isDebtorFilter ? debtorsLoading : customersLoading;
+
+  const customerList = isDebtorFilter
+    ? (Array.isArray(debtorsData) ? debtorsData : debtorsData?.results || []).filter(
+        c => !searchQuery || c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || c.phone?.includes(searchQuery)
+      )
+    : customersData?.results || [];
   const createCustomerMutation = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomerMutation = useDeleteCustomer();
-
-  const customerList = customersData?.results || [];
 
   const handleSaveCustomer = async (data) => {
     try {
@@ -485,9 +524,9 @@ const Customers = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] font-sans pb-32">
+    <div className="min-h-screen bg-[#F0F4FF] font-sans pb-32 md:pb-8">
       {/* Blue gradient header */}
-      <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-12 pb-8 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-8 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
         <div className="absolute top-10 -right-4 w-16 h-16 bg-white/5 rounded-full" />
         <div className="flex items-center justify-between">
@@ -495,7 +534,7 @@ const Customers = () => {
             <h1 className="text-white text-2xl font-bold">Mijozlar</h1>
             <div className="flex items-center gap-2 mt-1">
               <FiUsers className="text-blue-200 w-4 h-4" />
-              <span className="text-blue-200 text-sm">{customersData?.count || 0} ta mijoz</span>
+              <span className="text-blue-200 text-sm">{isDebtorFilter ? customerList.length : (customersData?.count || 0)} ta mijoz</span>
             </div>
           </div>
           <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center">
@@ -504,7 +543,7 @@ const Customers = () => {
         </div>
       </div>
 
-      <div className="px-4 -mt-3 relative z-10">
+      <div className="px-4 md:px-8 -mt-3 relative z-10 max-w-6xl mx-auto">
         {/* Search */}
         <div className="relative mb-4">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -537,9 +576,9 @@ const Customers = () => {
         </div>
 
         {/* Customer list */}
-        <div className="mt-2">
+        <div className="mt-2 md:grid md:grid-cols-2 md:gap-3">
           {isLoading ? (
-            <div className="flex justify-center py-20">
+            <div className="flex justify-center py-20 md:col-span-2">
               <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />
             </div>
           ) : customerList.length > 0 ? (

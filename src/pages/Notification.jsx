@@ -10,7 +10,7 @@ const Notification = () => {
   return (
     <div className="min-h-screen bg-[#F0F4FF] font-sans">
       {/* Blue gradient header */}
-      <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-12 pb-10 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-10 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
         <div className="absolute top-12 -right-4 w-16 h-16 bg-white/5 rounded-full" />
         <div className="flex items-center gap-3 relative z-10">
@@ -31,7 +31,7 @@ const Notification = () => {
       </div>
 
       {/* Content overlapping header */}
-      <div className="px-4 -mt-5 relative z-10 pb-8">
+      <div className="px-4 md:px-8 -mt-5 relative z-10 pb-8 max-w-3xl mx-auto">
         {isLoading ? (
           <div className="flex justify-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100">
             <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />

@@ -8,6 +8,55 @@ import {
   useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory
 } from '../hooks/useProducts';
 
+const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
+
+const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending }) => (
+  <div className="p-4 space-y-4">
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">Mahsulot nomi</label>
+      <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Mahsulot nomini kiriting" />
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
+        <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
+          <option value="">Tanlang...</option>
+          {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
+        <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className={inputClass}>
+          <option value="dona">Dona</option>
+          <option value="kg">Kg</option>
+          <option value="litr">Litr</option>
+          <option value="metr">Metr</option>
+        </select>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
+        <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className={inputClass} placeholder="0" />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
+        <input type="number" value={formData.cost_price} onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })} className={inputClass} placeholder="0" />
+      </div>
+    </div>
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi (so'm)</label>
+      <input type="number" value={formData.sale_price} onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })} className={inputClass} placeholder="0" />
+    </div>
+    <div className="flex gap-3 pt-2">
+      <button onClick={onSubmit} disabled={isPending || !formData.name || !formData.sale_price} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+        {isPending && <FiLoader className="animate-spin w-4 h-4" />}
+        {submitLabel}
+      </button>
+    </div>
+  </div>
+);
+
 const statusConfig = {
   good: { label: 'Yaxshi', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
   low: { label: 'Kam', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
@@ -169,60 +218,12 @@ const Warehouse = () => {
     }
   };
 
-  const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
-
-  const ProductForm = ({ onSubmit, submitLabel, isPending, disabled }) => (
-    <div className="p-4 space-y-4">
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Mahsulot nomi</label>
-        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Mahsulot nomini kiriting" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
-          <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
-            <option value="">Tanlang...</option>
-            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
-          <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className={inputClass}>
-            <option value="dona">Dona</option>
-            <option value="kg">Kg</option>
-            <option value="litr">Litr</option>
-            <option value="metr">Metr</option>
-          </select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
-          <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className={inputClass} placeholder="0" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
-          <input type="number" value={formData.cost_price} onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })} className={inputClass} placeholder="0" />
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi (so'm)</label>
-        <input type="number" value={formData.sale_price} onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })} className={inputClass} placeholder="0" />
-      </div>
-      <div className="flex gap-3 pt-2">
-        <button onClick={onSubmit} disabled={disabled || isPending || !formData.name || !formData.sale_price} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-          {isPending && <FiLoader className="animate-spin w-4 h-4" />}
-          {submitLabel}
-        </button>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] pb-32">
+    <div className="min-h-screen bg-[#F0F4FF] pb-32 md:pb-8">
       {/* White header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="px-5 py-5">
+        <div className="px-5 md:px-8 py-5 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Ombor</h1>
@@ -272,7 +273,7 @@ const Warehouse = () => {
       </div>
 
       {/* Product Grid */}
-      <div className="px-4 py-4">
+      <div className="px-4 md:px-8 py-4 max-w-6xl mx-auto">
         {productsLoading ? (
           <div className="flex items-center justify-center py-20">
             <FiLoader className="w-8 h-8 text-[#1447E6] animate-spin" />
@@ -296,55 +297,51 @@ const Warehouse = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {products.map((product) => {
               const sc = getStatusCfg(product.status);
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 hover:border-blue-200 transition-all"
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3.5 flex items-center gap-3"
                 >
-                  {/* Status badge */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${sc.bg} ${sc.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-                      {sc.label}
-                    </span>
-                    {product.category_name && (
-                      <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg truncate max-w-[80px]">{product.category_name}</span>
-                    )}
+                  {/* Status dot */}
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${sc.dot}`} />
+
+                  {/* Name + meta */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{product.name}</h3>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      {product.category_name && (
+                        <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">{product.category_name}</span>
+                      )}
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${sc.bg} ${sc.text}`}>{sc.label}</span>
+                    </div>
                   </div>
 
-                  {/* Name */}
-                  <h3 className="text-sm font-bold text-gray-900 truncate mb-3">{product.name}</h3>
+                  {/* Prices */}
+                  <div className="text-right shrink-0 mr-1">
+                    <p className="text-sm font-black text-[#1447E6]">{parseFloat(product.sale_price || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-gray-400">{parseFloat(product.cost_price || 0).toLocaleString()} tan</p>
+                  </div>
 
                   {/* Quantity */}
-                  <div className="bg-gray-50 rounded-xl p-2.5 mb-3 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] text-gray-400 font-semibold uppercase">Qoldiq</span>
-                      <span className="text-sm font-black text-gray-900">{product.quantity} <span className="text-[9px] text-gray-400 font-normal">{product.unit || 'dona'}</span></span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-1.5">
-                      <span className="text-[9px] text-gray-400 font-semibold">Tan narx</span>
-                      <span className="text-xs font-bold text-gray-700">{parseFloat(product.cost_price || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] text-[#1447E6] font-semibold">Sotuv narxi</span>
-                      <span className="text-xs font-black text-[#1447E6]">{parseFloat(product.sale_price || 0).toLocaleString()}</span>
-                    </div>
+                  <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2.5 py-1.5 mr-1">
+                    <p className="text-sm font-black text-gray-900 leading-tight">{product.quantity}</p>
+                    <p className="text-[9px] text-gray-400">{product.unit || 'dona'}</p>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => openEditModal(product)}
-                      className="flex-1 py-2 bg-[#1447E6] text-white rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-colors"
+                      className="w-8 h-8 bg-blue-50 text-[#1447E6] rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
                     >
-                      <FiEdit2 className="w-3 h-3" /> Tahrirlash
+                      <FiEdit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => openDeleteModal(product)}
-                      className="w-9 h-9 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                      className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                     >
                       <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
@@ -358,23 +355,23 @@ const Warehouse = () => {
 
       {/* Add Product Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end">
-          <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end" onClick={() => { setShowAddModal(false); resetForm(); }}>
+          <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Mahsulot qo'shish</h2>
               <button onClick={() => { setShowAddModal(false); resetForm(); }} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
                 <FiX className="w-4 h-4" />
               </button>
             </div>
-            <ProductForm onSubmit={handleAddProduct} submitLabel="Saqlash" isPending={createProductMutation.isPending} />
+            <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleAddProduct} submitLabel="Saqlash" isPending={createProductMutation.isPending} />
           </div>
         </div>
       )}
 
       {/* Edit Product Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end">
-          <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end" onClick={() => { setShowEditModal(false); resetForm(); }}>
+          <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Mahsulotni tahrirlash</h2>
               <button onClick={() => { setShowEditModal(false); resetForm(); }} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
@@ -387,7 +384,7 @@ const Warehouse = () => {
                 <p className="text-sm">Ma'lumotlar yuklanmoqda...</p>
               </div>
             ) : (
-              <ProductForm onSubmit={handleEditProduct} submitLabel="Yangilash" isPending={updateProductMutation.isPending} />
+              <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleEditProduct} submitLabel="Yangilash" isPending={updateProductMutation.isPending} />
             )}
           </div>
         </div>
@@ -395,8 +392,8 @@ const Warehouse = () => {
 
       {/* Delete Confirmation */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center px-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center px-4" onClick={() => setShowDeleteModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="text-center mb-5">
               <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <FiTrash2 className="w-6 h-6 text-red-500" />
@@ -423,8 +420,8 @@ const Warehouse = () => {
 
       {/* Category Management Modal */}
       {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[70] flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[70] flex items-center justify-center px-4" onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }}>
+          <div className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Kategoriyalar</h2>
@@ -503,8 +500,8 @@ const Warehouse = () => {
 
       {/* Category Delete Confirm */}
       {showCatDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[80] flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl border border-gray-100">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[80] flex items-center justify-center px-4" onClick={() => setShowCatDeleteConfirm(false)}>
+          <div className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl border border-gray-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-center">
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiAlertCircle className="w-8 h-8 text-red-500" />

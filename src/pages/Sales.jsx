@@ -222,12 +222,6 @@ const Sales = () => {
             <h1 className="text-xl font-bold text-gray-900">Sotuv</h1>
             <p className="text-xs text-gray-400">Yangi buyurtma rasmiylashtirish</p>
           </div>
-          {cart.length > 0 && (
-            <div className="w-9 h-9 bg-[#1447E6] rounded-xl flex items-center justify-center">
-              <FiShoppingCart className="w-4 h-4 text-white" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{cart.length}</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -385,15 +379,24 @@ const Sales = () => {
             {paymentType !== 'debt' && (
               <div className="mb-4">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  To'langan summa (bo'sh bo'lsa to'liq)
+                  To'langan summa
                 </label>
-                <input
-                  type="number"
-                  placeholder="Summani kiriting..."
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Summani kiriting..."
+                    value={paidAmount}
+                    onChange={(e) => setPaidAmount(e.target.value)}
+                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPaidAmount(getTotal().toString())}
+                    className="px-3 py-3 bg-[#1447E6] text-white rounded-xl text-xs font-bold whitespace-nowrap hover:bg-blue-700 transition-colors"
+                  >
+                    To'liq summa
+                  </button>
+                </div>
               </div>
             )}
 
