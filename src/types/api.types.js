@@ -153,6 +153,43 @@
  */
 
 /**
+ * @typedef {Object} TelegramBotUser
+ * @property {string} chat_id
+ * @property {string} [username]
+ * @property {string} [first_name]
+ * @property {string} [last_name]
+ * @property {string} created_at
+ */
+
+/**
+ * @typedef {Object} TelegramBotUserAllowedResponse
+ * @property {boolean} is_allowed
+ * @property {TelegramBotUser} [user]
+ */
+
+/**
+ * @typedef {Object} PaymentRequest
+ * @property {number} amount
+ */
+
+/**
+ * @typedef {Object} WarehouseReport
+ * @property {number} total_products
+ * @property {number} total_quantity
+ * @property {string} total_cost_value
+ * @property {string} total_sale_value
+ * @property {Product[]} low_stock_products
+ */
+
+/**
+ * @typedef {Object} ProfitReport
+ * @property {string} total_revenue
+ * @property {string} total_cost
+ * @property {string} total_profit
+ * @property {Object[]} daily_data
+ */
+
+/**
  * @template T
  * @typedef {Object} PaginatedResponse
  * @property {number} count

@@ -88,6 +88,16 @@ const purchaseService = {
   },
 
   /**
+   * Get single supplier
+   * @param {number} id
+   * @returns {Promise<Supplier>}
+   */
+  getSupplier: async (id) => {
+    const response = await api.get(`/api/purchases/suppliers/${id}/`);
+    return response.data;
+  },
+
+  /**
    * Delete supplier
    * @param {number} id
    */

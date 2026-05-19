@@ -90,3 +90,17 @@ export const useDeleteCategory = () => {
     },
   });
 };
+
+export const useLowStockProducts = () => {
+  return useQuery({
+    queryKey: ['products', 'low_stock'],
+    queryFn: () => productService.getLowStockProducts(),
+  });
+};
+
+export const useProductsForSale = () => {
+  return useQuery({
+    queryKey: ['products', 'for_sale'],
+    queryFn: () => productService.getProductsForSale(),
+  });
+};

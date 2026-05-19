@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:apibcrm.nsdcorporation.uz)",
+      "Bash(npx vite *)",
+      "Bash(Remove-Item \"D:\\\\Visual Studios\\\\FullStack\\\\balon_market_crm\\\\src\\\\services\\\\reports.service.js\" -Force)",
+      "Bash(Remove-Item \"D:\\\\Visual Studios\\\\FullStack\\\\balon_market_crm\\\\src\\\\services\\\\warehouse.service.js\" -Force)",
+      "Bash(Write-Host \"Deleted duplicate service files\")"
+    ]
+  }
+}

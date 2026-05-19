@@ -72,7 +72,78 @@ const customerService = {
   getVipCustomers: async () => {
     const response = await api.get('/api/customers/vip/');
     return response.data;
-  }
+  },
+
+  /**
+   * Get Telegram bot link for customer
+   * @param {number} id
+   * @returns {Promise<Customer>}
+   */
+  getBotLink: async (id) => {
+    const response = await api.get(`/api/customers/${id}/bot-link/`);
+    return response.data;
+  },
+
+  /**
+   * Pay customer debt
+   * @param {number} id
+   * @param {Object} data - { amount }
+   * @returns {Promise<Customer>}
+   */
+  payDebt: async (id, data) => {
+    const response = await api.post(`/api/customers/${id}/pay-debt/`, data);
+    return response.data;
+  },
+
+  /**
+   * Send debt reminder to customer via Telegram
+   * @param {number} id
+   * @returns {Promise}
+   */
+  sendDebtReminder: async (id) => {
+    const response = await api.post(`/api/customers/${id}/send-debt-reminder/`);
+    return response.data;
+  },
+
+  /**
+   * Unlink customer from Telegram
+   * @param {number} id
+   * @returns {Promise<Customer>}
+   */
+  unlinkTelegram: async (id) => {
+    const response = await api.post(`/api/customers/${id}/unlink/`);
+    return response.data;
+  },
+
+  /**
+   * Link customer by phone number
+   * @param {Object} data - { phone }
+   * @returns {Promise<Customer>}
+   */
+  linkByPhone: async (data) => {
+    const response = await api.post('/api/customers/link-by-phone/', data);
+    return response.data;
+  },
+
+  /**
+   * Link customer by token
+   * @param {Object} data - { token }
+   * @returns {Promise<Customer>}
+   */
+  linkByToken: async (data) => {
+    const response = await api.post('/api/customers/link-by-token/', data);
+    return response.data;
+  },
+
+  /**
+   * Get customer by Telegram chat_id
+   * @param {string} chatId
+   * @returns {Promise<Customer>}
+   */
+  getCustomerByChatId: async (chatId) => {
+    const response = await api.get(`/api/customers/by-chat-id/${chatId}/`);
+    return response.data;
+  },
 };
 
 export default customerService;

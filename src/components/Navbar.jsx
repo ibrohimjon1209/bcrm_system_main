@@ -1,123 +1,107 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  FiHome, 
-  FiShoppingCart, 
-  FiPackage, 
-  FiUsers, 
-  FiBarChart2, 
-  FiTruck 
+import {
+  FiHome,
+  FiShoppingCart,
+  FiPackage,
+  FiUsers,
+  FiBarChart2,
+  FiTruck
 } from 'react-icons/fi';
 
 const Navbar = () => {
   const location = useLocation();
 
   const navItems = [
-    { 
-      path: '/', 
-      icon: FiHome, 
+    {
+      path: '/',
+      icon: FiHome,
       label: 'Asosiy',
       id: 'dashboard'
     },
-    { 
-      path: '/sales', 
-      icon: FiShoppingCart, 
+    {
+      path: '/sales',
+      icon: FiShoppingCart,
       label: 'Sotuv',
       id: 'sales',
     },
-    { 
-      path: '/warehouse', 
-      icon: FiPackage, 
+    {
+      path: '/warehouse',
+      icon: FiPackage,
       label: 'Ombor',
       id: 'warehouse'
     },
-    { 
-      path: '/purchases', 
-      icon: FiTruck, 
+    {
+      path: '/purchases',
+      icon: FiTruck,
       label: 'Xarid',
       id: 'purchases'
     },
-    { 
-      path: '/customers', 
-      icon: FiUsers, 
+    {
+      path: '/customers',
+      icon: FiUsers,
       label: 'Mijozlar',
       id: 'customers'
     },
-    { 
-      path: '/reports', 
-      icon: FiBarChart2, 
+    {
+      path: '/reports',
+      icon: FiBarChart2,
       label: 'Hisobot',
       id: 'reports'
     },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden animate-slide-up">
-      <div className="mx-4 mb-4">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+      <div className="mx-3 mb-3">
         <div className="relative">
-          {/* Glass effect background */}
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-black/10" />
-          
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-blue-100/50 rounded-3xl" />
-          
+          {/* Glassmorphism background */}
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-xl border border-white/30 rounded-3xl shadow-2xl shadow-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 to-white/60 rounded-3xl" />
+
           {/* Navigation items */}
-          <div className="relative flex justify-around items-center h-[72px] px-2">
-            {navItems.map((item, index) => {
+          <div className="relative flex justify-around items-center h-[68px] px-1">
+            {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
-              const isCTA = item.isCTA;
-              
+
               return (
                 <Link
                   key={item.id}
                   to={item.path}
-                  className={`
-                    relative flex flex-col items-center justify-center 
-                    transition-all duration-300 ease-out
-                    ${isCTA ? 'scale-110' : 'scale-100'}
-                    ${isActive ? 'transform' : ''}
-                  `}
+                  className="relative flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ease-out min-w-[48px]"
                 >
                   {/* Icon container */}
                   <div
                     className={`
-                      relative flex items-center justify-center
-                      transition-all duration-300 ease-out
-                      ${isCTA ? 'w-12 h-12' : 'w-10 h-10'}
-                      ${isActive 
-                        ? 'text-blue-600 scale-110' 
-                        : 'text-gray-400 hover:text-gray-600'
+                      relative flex items-center justify-center rounded-xl transition-all duration-300 ease-out
+                      ${isActive
+                        ? 'bg-blue-50 p-2 text-[#1447E6]'
+                        : 'p-1.5 text-gray-400 hover:text-gray-600'
                       }
                     `}
                   >
-                    {/* Icon background glow for active state */}
-                    {isActive && (
-                      <div className="absolute inset-0 bg-blue-100 rounded-2xl blur-xl opacity-60" />
-                    )}
-                    
-                    <Icon 
-                      className={`
-                        relative z-10 transition-all duration-300
-                        ${isCTA ? 'w-6 h-6' : 'w-5 h-5'}
-                        ${isActive ? 'drop-shadow-sm' : ''}
-                      `}
+                    <Icon
+                      className={`transition-all duration-300 ${isActive ? 'w-5 h-5' : 'w-4 h-4'}`}
                       strokeWidth={isActive ? 2.5 : 2}
                     />
                   </div>
-                  
+
                   {/* Label */}
                   <span
-                    className={`
-                      mt-1 font-medium transition-all duration-300 text-[10px]
-                      ${isActive 
-                        ? 'text-blue-600 opacity-100 translate-y-0' 
-                        : 'text-gray-400 opacity-70 translate-y-0.5'
-                      }
-                    `}
+                    className={`font-medium transition-all duration-300 leading-none ${
+                      isActive
+                        ? 'text-[#1447E6] text-[9px]'
+                        : 'text-gray-400 text-[9px]'
+                    }`}
                   >
                     {item.label}
                   </span>
+
+                  {/* Active pill dot */}
+                  {isActive && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#1447E6] rounded-full" />
+                  )}
                 </Link>
               );
             })}

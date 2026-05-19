@@ -56,3 +56,41 @@ export const useVipCustomers = () => {
     queryFn: () => customerService.getVipCustomers(),
   });
 };
+
+export const usePayDebt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => customerService.payDebt(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer', data.id] });
+      toast.success("Qarz to'lovi muvaffaqiyatli amalga oshirildi");
+    },
+  });
+};
+
+export const useSendDebtReminder = () => {
+  return useMutation({
+    mutationFn: (id) => customerService.sendDebtReminder(id),
+    onSuccess: () => {
+      toast.success('Eslatma muvaffaqiyatli yuborildi');
+    },
+  });
+};
+
+export const useGetBotLink = () => {
+  return useMutation({
+    mutationFn: (id) => customerService.getBotLink(id),
+  });
+};
+
+export const useUnlinkTelegram = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => customerService.unlinkTelegram(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success("Telegram bog'liqlik bekor qilindi");
+    },
+  });
+};

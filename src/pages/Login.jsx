@@ -141,7 +141,7 @@ const Login = () => {
                 />
               </div>
               {errors.phone && (
-                <p className="mt-2 text-sm text-blue-600 animate-fade-in">{errors.phone}</p>
+                <p className="mt-2 text-sm text-blue-600">{errors.phone}</p>
               )}
             </div>
 
@@ -172,7 +172,7 @@ const Login = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-2 text-sm text-blue-600 animate-fade-in">{errors.password}</p>
+                <p className="mt-2 text-sm text-blue-600">{errors.password}</p>
               )}
             </div>
 
@@ -195,7 +195,7 @@ const Login = () => {
 
             {/* General Error */}
             {errors.general && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center animate-fade-in">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
                 <p className="text-sm text-blue-600">{errors.general}</p>
               </div>
             )}
@@ -231,23 +231,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Add custom animations */}
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 };

@@ -38,3 +38,48 @@ export const useCreateSupplier = () => {
     },
   });
 };
+
+export const useUpdatePurchase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => purchaseService.updatePurchase(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      toast.success('Xarid muvaffaqiyatli yangilandi');
+    },
+  });
+};
+
+export const useDeletePurchase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => purchaseService.deletePurchase(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success("Xarid muvaffaqiyatli o'chirildi");
+    },
+  });
+};
+
+export const useUpdateSupplier = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => purchaseService.updateSupplier(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast.success('Yetkazib beruvchi muvaffaqiyatli yangilandi');
+    },
+  });
+};
+
+export const useDeleteSupplier = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => purchaseService.deleteSupplier(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast.success("Yetkazib beruvchi muvaffaqiyatli o'chirildi");
+    },
+  });
+};
