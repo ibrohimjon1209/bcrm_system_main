@@ -4,10 +4,11 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import {
   FiPlus, FiSearch, FiPhone, FiEdit,
   FiTrash2, FiMessageCircle, FiFileText, FiX, FiCheckCircle,
-  FiMapPin, FiCalendar, FiCreditCard, FiLoader, FiUsers
+  FiMapPin, FiCalendar, FiCreditCard, FiLoader, FiUsers,
+  FiChevronDown, FiChevronUp, FiCopy, FiMessageSquare
 } from 'react-icons/fi';
 import { FiSend } from 'react-icons/fi';
-import { useCustomers, useDebtors, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useUnlinkTelegram } from '../hooks/useCustomers';
+import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCustomerMessageHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useUnlinkTelegram, useSendMessage } from '../hooks/useCustomers';
 import { toast } from 'react-toastify';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
@@ -132,18 +133,75 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   );
 };
 
-const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
+const CustomerMessageHistoryView = ({ customerId, onClose }) => {
+  const { data: messages, isLoading } = useCustomerMessageHistory(customerId);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 400 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 400 }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="absolute inset-0 z-[110] bg-[#F0F4FF] flex flex-col"
+    >
+      <div className="bg-white border-b border-gray-100 p-4 flex items-center justify-between shadow-sm relative z-10">
+        <h3 className="font-bold text-gray-900">Xabarlar tarixi</h3>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-600">
+          <FiX className="w-4 h-4"/>
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 relative z-0">
+        {isLoading ? (
+          <div className="flex justify-center py-10"><FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" /></div>
+        ) : messages?.length > 0 ? (
+          messages.map(msg => (
+            <div key={msg.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#1447E6] bg-blue-50 px-2 py-0.5 rounded-lg">{msg.source_display}</span>
+                <span className="text-[10px] text-gray-400">{new Date(msg.created_at).toLocaleString()}</span>
+              </div>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.text}</p>
+              {msg.error && (
+                <p className="text-xs text-red-500 mt-2 bg-red-50 p-2 rounded-lg">{msg.error}</p>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-10 text-gray-400 text-sm">Xabarlar tarixi bo'sh</div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdit }) => {
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [showTelegramForm, setShowTelegramForm] = useState(false);
+  const [telegramMessage, setTelegramMessage] = useState('');
+  const [showMsgHistory, setShowMsgHistory] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const payDebtMutation = usePayDebt();
   const sendReminderMutation = useSendDebtReminder();
   const unlinkMutation = useUnlinkTelegram();
+  const sendMessageMutation = useSendMessage();
+  // Fetch full customer detail for accurate is_linked, link_token, address etc.
+  const { data: customerDetail, isLoading: detailLoading } = useCustomer(customer?.id);
+  const { data: historyData, isLoading: historyLoading } = useCustomerSalesHistory(showHistory ? customer?.id : null);
+  const salesHistory = historyData || [];
 
   if (!customer) return null;
 
-  const hasDebt = parseFloat(customer.debt || 0) > 0;
-  const hasTelegram = !!customer.telegram_chat_id;
+  // Use fresh detail data, fall back to list snapshot while loading
+  const detail = customerDetail || customer;
+  const hasDebt = parseFloat(detail.debt || 0) > 0;
+  const isLinked = customerDetail?.is_linked ?? false;
+  const botLinkLoading = !customerDetail && detailLoading;
+  const deepLink = customerDetail?.link_token
+    ? `https://t.me/market_crm_robot?start=cust_${customerDetail.link_token}`
+    : null;
 
   const handlePayDebt = async (e) => {
     e.preventDefault();
@@ -174,6 +232,25 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
     }
   };
 
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!telegramMessage.trim()) return;
+    try {
+      await sendMessageMutation.mutateAsync({ id: customer.id, data: { text: telegramMessage } });
+      setTelegramMessage('');
+      setShowTelegramForm(false);
+    } catch(err) {}
+  };
+
+  const copyBotLink = () => {
+    if (deepLink) {
+      navigator.clipboard.writeText(deepLink);
+      setLinkCopied(true);
+      toast.success("Bot linki nusxalandi!");
+      setTimeout(() => setLinkCopied(false), 2500);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 80 }}
@@ -185,25 +262,35 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-12 pb-20 relative overflow-hidden">
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
         <div className="absolute top-12 -right-4 w-20 h-20 bg-white/5 rounded-full" />
-        <button onClick={onClose} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white mb-4 hover:bg-white/20 transition-colors">
-          <FiX className="w-5 h-5" />
-        </button>
-        <h2 className="text-white text-lg font-bold">Mijoz profili</h2>
+        <div className="flex items-center justify-between mb-4 relative z-10">
+          <button onClick={onClose} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+            <FiX className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onEdit(customer)} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+              <FiEdit className="w-4 h-4" />
+            </button>
+            <button onClick={() => onDelete(customer.id)} className="w-9 h-9 bg-red-500/20 text-red-100 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">
+              <FiTrash2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <h2 className="text-white text-lg font-bold relative z-10">Mijoz profili</h2>
       </div>
 
       {/* Avatar card overlapping header */}
       <div className="px-5 -mt-12 relative z-10 mb-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shrink-0 ${customer.is_vip ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-[#1447E6] to-[#0F3CC7]'}`}>
-            {customer.name ? customer.name.charAt(0).toUpperCase() : 'M'}
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shrink-0 ${detail.is_vip ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-[#1447E6] to-[#0F3CC7]'}`}>
+            {detail.name ? detail.name.charAt(0).toUpperCase() : 'M'}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900 truncate">{customer.name}</h2>
+            <h2 className="text-lg font-bold text-gray-900 truncate">{detail.name}</h2>
             <div className="flex items-center gap-1 text-gray-500 text-sm mt-0.5">
               <FiPhone className="w-3.5 h-3.5" />
-              <span>{customer.phone}</span>
+              <span>{detail.phone}</span>
             </div>
-            {customer.is_vip && (
+            {detail.is_vip && (
               <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full mt-1 inline-block">VIP</span>
             )}
           </div>
@@ -215,11 +302,11 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
             <span className="text-xs text-gray-500 block mb-1">Jami xaridlar</span>
-            <span className="font-bold text-gray-900 text-sm">{parseFloat(customer.total_spent || 0).toLocaleString()} so'm</span>
+            <span className="font-bold text-gray-900 text-sm">{parseFloat(detail.total_spent || 0).toLocaleString()} so'm</span>
           </div>
           <div className={`rounded-2xl p-4 shadow-sm border text-center ${hasDebt ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
             <span className={`text-xs block mb-1 ${hasDebt ? 'text-red-500' : 'text-blue-600'}`}>Joriy qarz</span>
-            <span className={`font-bold text-sm ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{parseFloat(customer.debt || 0).toLocaleString()} so'm</span>
+            <span className={`font-bold text-sm ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{parseFloat(detail.debt || 0).toLocaleString()} so'm</span>
           </div>
         </div>
 
@@ -231,26 +318,80 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
             </div>
             <div>
               <span className="text-[10px] text-gray-400 block">Manzil</span>
-              <span className="text-sm font-medium text-gray-700">{customer.address || 'Kiritilmagan'}</span>
+              <span className="text-sm font-medium text-gray-700">{detail.address || 'Kiritilmagan'}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-4">
-            <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-              <FiCalendar className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[10px] text-gray-400 block">Oxirgi savdo</span>
-              <span className="text-sm font-medium text-gray-700">{customer.last_purchase_date ? new Date(customer.last_purchase_date).toLocaleDateString() : 'Hali yo\'q'}</span>
-            </div>
+          <div className="flex flex-col p-4">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
+                  <FiCalendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 block">Savdolar tarixi</span>
+                  <span className="text-sm font-medium text-gray-700">{showHistory ? "Yopish" : "Ko'rish"}</span>
+                </div>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                {showHistory ? <FiChevronUp className="w-4 h-4 text-gray-500" /> : <FiChevronDown className="w-4 h-4 text-gray-500" />}
+              </div>
+            </button>
+            <AnimatePresence>
+              {showHistory && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-4 mt-2 border-t border-gray-100 space-y-3">
+                    {historyLoading ? (
+                      <div className="py-4 flex justify-center"><FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" /></div>
+                    ) : salesHistory.length > 0 ? (
+                      salesHistory.map(sale => (
+                        <div key={sale.id} className="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">Xarid #{sale.id} • {sale.item_count} ta mahsulot</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{new Date(sale.created_at).toLocaleString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-black text-[#1447E6]">{parseFloat(sale.total || 0).toLocaleString()} so'm</p>
+                            <p className="text-[9px] font-bold text-gray-500">{sale.payment_method_display}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-center text-gray-400 py-2">Tarix bo'sh</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          {hasTelegram && (
+
+          {detail.note && (
+            <div className="flex items-center gap-3 p-4">
+              <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 shrink-0">
+                <FiFileText className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <span className="text-[10px] text-gray-400 block">Eslatma</span>
+                <span className="text-sm font-medium text-gray-700">{detail.note}</span>
+              </div>
+            </div>
+          )}
+
+          {isLinked && (
             <div className="flex items-center gap-3 p-4">
               <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
                 <FiMessageCircle className="w-4 h-4" />
               </div>
               <div className="flex-1">
                 <span className="text-[10px] text-gray-400 block">Telegram</span>
-                <span className="text-sm font-medium text-blue-600">Ulangan</span>
+                <span className="text-sm font-medium text-blue-600">Ulangan ✓</span>
               </div>
               <button
                 onClick={handleUnlink}
@@ -263,22 +404,93 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
           )}
         </div>
 
-        {/* Primary actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <a
-            href={`https://t.me/${customer.phone?.startsWith('+') ? customer.phone : '+' + customer.phone}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#1447E6] text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm"
-          >
-            <FiMessageCircle className="w-4 h-4" /> Telegram
-          </a>
-          <button
-            onClick={onViewReceipt}
-            className="bg-gray-800 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm"
-          >
-            <FiFileText className="w-4 h-4" /> Sotuvlar
-          </button>
+        {/* Telegram actions */}
+        <div>
+          {botLinkLoading ? (
+            <div className="flex items-center justify-center gap-2 py-3 text-sm text-gray-400">
+              <FiLoader className="animate-spin w-4 h-4" /> Telegram holati tekshirilmoqda...
+            </div>
+          ) : isLinked ? (
+            /* Telegram IS linked — send message + history */
+            <div className="space-y-3">
+              {showTelegramForm ? (
+                <form onSubmit={handleSendMessage} className="bg-blue-50 rounded-2xl p-4 space-y-3 border border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-blue-700">Telegram xabar yuborish</p>
+                    <button
+                      type="button"
+                      onClick={() => { setShowTelegramForm(false); setTelegramMessage(''); }}
+                      className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center"
+                    >
+                      <FiX className="w-3 h-3 text-blue-600" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={telegramMessage}
+                    onChange={e => setTelegramMessage(e.target.value)}
+                    placeholder="Xabar yozing..."
+                    autoFocus
+                    className="w-full bg-white border border-blue-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 min-h-[90px] resize-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={sendMessageMutation.isPending || !telegramMessage.trim()}
+                    className="w-full py-3 bg-[#1447E6] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
+                  >
+                    {sendMessageMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiSend className="w-4 h-4" />}
+                    {sendMessageMutation.isPending ? 'Yuborilmoqda...' : 'Yuborish'}
+                  </button>
+                </form>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowTelegramForm(true)}
+                    className="bg-[#1447E6] text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md active:scale-95 transition-transform"
+                  >
+                    <FiSend className="w-4 h-4" /> Telegram xabar
+                  </button>
+                  <button
+                    onClick={() => setShowMsgHistory(true)}
+                    className="bg-gray-800 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md active:scale-95 transition-transform"
+                  >
+                    <FiMessageSquare className="w-4 h-4" /> Xabarlar tarixi
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Telegram NOT linked — show pretty bot link */
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                  <FiMessageCircle className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-blue-700">Telegram bog'lash</p>
+                  <p className="text-[10px] text-blue-500">Linkni mijozga yuboring</p>
+                </div>
+              </div>
+              {deepLink && (
+                <div className="bg-white rounded-xl px-3 py-2.5 mb-3 border border-blue-100">
+                  <p className="text-[11px] text-gray-500 break-all font-mono select-all leading-relaxed">
+                    {deepLink}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={copyBotLink}
+                disabled={!deepLink}
+                className={`w-full rounded-xl py-3 font-bold flex items-center justify-center gap-2 text-sm transition-all active:scale-95 ${
+                  linkCopied
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-[#1447E6] text-white disabled:opacity-50'
+                }`}
+              >
+                {linkCopied ? <FiCheckCircle className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
+                {linkCopied ? 'Nusxalandi!' : 'Linkni nusxalash'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Debt actions */}
@@ -287,16 +499,25 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
             {showPayForm ? (
               <form onSubmit={handlePayDebt} className="bg-red-50 rounded-2xl p-4 space-y-3 border border-red-100">
                 <p className="text-xs font-semibold text-red-600">
-                  Qarz: {parseFloat(customer.debt).toLocaleString()} so'm
+                  Qarz: {parseFloat(detail.debt).toLocaleString()} so'm
                 </p>
-                <input
-                  type="number"
-                  value={payAmount}
-                  onChange={e => setPayAmount(e.target.value)}
-                  placeholder="To'lov miqdori (so'm)"
-                  max={parseFloat(customer.debt)}
-                  className="w-full bg-white border border-red-200 rounded-xl py-3 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-300"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={payAmount}
+                    onChange={e => setPayAmount(e.target.value)}
+                    placeholder="Miqdor (so'm)"
+                    max={parseFloat(detail.debt)}
+                    className="flex-1 bg-white border border-red-200 rounded-xl py-3 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPayAmount(parseFloat(detail.debt).toString())}
+                    className="px-3 bg-red-100 text-red-600 rounded-xl text-xs font-bold whitespace-nowrap border border-red-200 hover:bg-red-200 transition-colors"
+                  >
+                    To'liq
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -337,6 +558,15 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
         )}
 
       </div>
+
+      <AnimatePresence>
+        {showMsgHistory && (
+          <CustomerMessageHistoryView 
+            customerId={customer.id} 
+            onClose={() => setShowMsgHistory(false)} 
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -346,6 +576,9 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
     name: initialData?.name || '',
     phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',
     address: initialData?.address || '',
+    debt: initialData?.debt || 0,
+    status: initialData?.status || 'active',
+    note: initialData?.note || '',
   });
 
   const handleSubmit = (e) => {
@@ -372,7 +605,7 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
         initial={{ y: 300 }}
         animate={{ y: 0 }}
         exit={{ y: 300 }}
-        className="bg-white rounded-t-3xl px-5 pt-6 pb-8 relative w-full max-w-md mx-auto"
+        className="bg-white rounded-t-3xl px-5 pt-6 pb-8 relative w-full max-w-md mx-auto max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Mijoz tahrirlash' : "Mijoz qo'shish"}</h2>
@@ -415,6 +648,40 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
               type="text"
               className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
               placeholder="Toshkent shahri"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1.5">Mijoz holati</label>
+            <select
+              value={formData.status}
+              onChange={e => setFormData({ ...formData, status: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+            >
+              <option value="active">Faol</option>
+              <option value="vip">VIP</option>
+              <option value="debtor">Qarzdor</option>
+              <option value="inactive">Nofaol</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz miqdori</label>
+            <input
+              name="debt"
+              value={formData.debt}
+              onChange={e => setFormData({ ...formData, debt: e.target.value })}
+              type="number"
+              className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+              placeholder="0"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1.5">Eslatma (Note)</label>
+            <textarea
+              name="note"
+              value={formData.note}
+              onChange={e => setFormData({ ...formData, note: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] min-h-[80px]"
+              placeholder="Mijoz haqida eslatma..."
             />
           </div>
           <button
@@ -468,6 +735,7 @@ const Customers = () => {
     try {
       if (customerToEdit) {
         await updateCustomerMutation.mutateAsync({ id: customerToEdit.id, data });
+        setSelectedCustomer(null);
       } else {
         await createCustomerMutation.mutateAsync(data);
       }
@@ -582,6 +850,8 @@ const Customers = () => {
             customer={selectedCustomer}
             onClose={() => setSelectedCustomer(null)}
             onViewReceipt={() => {}}
+            onDelete={handleDeleteCustomer}
+            onEdit={handleEditCustomer}
           />
         )}
       </AnimatePresence>

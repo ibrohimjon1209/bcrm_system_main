@@ -1,108 +1,131 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   FiPlus, FiSearch, FiPackage, FiTruck, FiX, FiCheck,
-  FiMinus, FiLoader, FiTrash2
+  FiMinus, FiLoader, FiTrash2, FiEdit
 } from 'react-icons/fi';
-import { usePurchases, useCreatePurchase, useDeletePurchase, useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '../hooks/usePurchases';
+import { usePurchases, usePurchaseDetail, useCreatePurchase, useUpdatePurchase, useDeletePurchase } from '../hooks/usePurchases';
 import { useProducts } from '../hooks/useProducts';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const paymentMethodLabel = (method) => {
-  const map = { cash: 'Naqd', card: 'Karta', debt: 'Nasiya' };
-  return map[method] || method || 'Naqd';
-};
-
-const paymentBadgeClass = (method) => {
-  if (method === 'card') return 'bg-blue-50 text-blue-600';
-  if (method === 'debt') return 'bg-orange-50 text-orange-600';
-  return 'bg-emerald-50 text-emerald-600';
-};
-
 const Purchases = () => {
-  const [isNewPurchaseOpen, setIsNewPurchaseOpen] = useState(false);
+  const [viewPurchase, setViewPurchase] = useState(null);
+  const [modalMode, setModalMode] = useState(null); // 'create' | 'edit' | null
+  const [editPurchaseId, setEditPurchaseId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState([]); // { id, name, quantity, costPrice }
   const [productSearch, setProductSearch] = useState('');
+  const [note, setNote] = useState('');
 
   const { data: purchasesData, isLoading: purchasesLoading } = usePurchases();
-  const { data: suppliersData } = useSuppliers();
+  const { data: purchaseDetail, isLoading: detailLoading } = usePurchaseDetail(viewPurchase?.id);
   const { data: productsData } = useProducts({ search: productSearch });
+
   const createPurchaseMutation = useCreatePurchase();
+  const updatePurchaseMutation = useUpdatePurchase();
   const deletePurchaseMutation = useDeletePurchase();
-  const createSupplierMutation = useCreateSupplier();
-  const deleteSupplierMutation = useDeleteSupplier();
 
   const purchases = purchasesData?.results || [];
-  const suppliers = suppliersData?.results || [];
   const products = productsData?.results || [];
 
   const filteredPurchases = searchTerm
-    ? purchases.filter(p => p.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    ? purchases.filter(p => p.id?.toString().includes(searchTerm))
     : purchases;
 
   const addToCart = (product) => {
     const existing = cart.find(item => item.id === product.id);
     if (existing) {
-      setCart(cart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
+      setCart(cart.map(item =>
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+      ));
     } else {
-      setCart([...cart, { id: product.id, name: product.name, price: parseFloat(product.cost_price || 0), quantity: 1 }]);
+      setCart([...cart, {
+        id: product.id,
+        name: product.name,
+        quantity: 1,
+        costPrice: parseFloat(product.cost_price || 0)
+      }]);
     }
   };
 
   const updateQuantity = (id, delta) => {
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        const newQty = item.quantity + delta;
-        return newQty > 0 ? { ...item, quantity: newQty } : item;
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
+    setCart(
+      cart
+        .map(item => item.id === id ? { ...item, quantity: item.quantity + delta } : item)
+        .filter(item => item.quantity > 0)
+    );
   };
 
-  const getTotal = () => cart.reduce((sum, item) => sum + (parseFloat(item.price || 0) * item.quantity), 0);
+  const updateCostPrice = (id, value) => {
+    setCart(cart.map(item =>
+      item.id === id ? { ...item, costPrice: parseFloat(value) || 0 } : item
+    ));
+  };
 
-  const handleCompletePurchase = async () => {
-    if (!selectedSupplier) {
-      toast.error('Yetkazib beruvchini tanlang');
-      return;
-    }
+  const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
+
+  const getTotal = () =>
+    cart.reduce((sum, item) => sum + item.costPrice * item.quantity, 0);
+
+  const openCreateModal = () => {
+    setCart([]);
+    setNote('');
+    setEditPurchaseId(null);
+    setModalMode('create');
+  };
+
+  const openEditModal = (purchase) => {
+    setCart(
+      (purchase.items || []).map(item => ({
+        id: item.product,
+        name: item.product_name,
+        quantity: item.quantity,
+        costPrice: parseFloat(item.cost_price || 0)
+      }))
+    );
+    setNote(purchase.note || '');
+    setEditPurchaseId(purchase.id);
+    setModalMode('edit');
+  };
+
+  const handleSave = async () => {
     if (cart.length === 0) {
-      toast.error('Mahsulotlarni tanlang');
+      toast.error('Kamida bitta mahsulot tanlang');
       return;
     }
     const payload = {
-      supplier: selectedSupplier.id,
       items: cart.map(item => ({
         product: item.id,
         quantity: item.quantity,
-        cost_price: item.price
+        cost_price: item.costPrice.toString()
       })),
-      note: ''
+      note
     };
     try {
-      await createPurchaseMutation.mutateAsync(payload);
-      setIsNewPurchaseOpen(false);
-      setCart([]);
-      setSelectedSupplier(null);
-    } catch (error) {}
+      if (modalMode === 'create') {
+        await createPurchaseMutation.mutateAsync(payload);
+      } else {
+        await updatePurchaseMutation.mutateAsync({ id: editPurchaseId, data: payload });
+      }
+      setModalMode(null);
+    } catch (_) {}
   };
+
+  const isPending = createPurchaseMutation.isPending || updatePurchaseMutation.isPending;
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] pb-32 md:pb-8">
-      {/* Blue gradient header */}
+      {/* Header */}
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-8 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
         <div className="absolute top-12 -right-4 w-16 h-16 bg-white/5 rounded-full" />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-white text-2xl font-bold">Xaridlar</h1>
-            <p className="text-blue-200 text-sm mt-0.5">Taminot boshqaruvi</p>
+            <p className="text-blue-200 text-sm mt-0.5">Ombor to'ldirish</p>
           </div>
           <button
-            onClick={() => setIsNewPurchaseOpen(true)}
+            onClick={openCreateModal}
             className="w-10 h-10 bg-white/20 text-white rounded-2xl flex items-center justify-center hover:bg-white/30 transition-colors"
           >
             <FiPlus className="w-5 h-5" />
@@ -116,7 +139,7 @@ const Purchases = () => {
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Yetkazib beruvchi qidirish..."
+            placeholder="Xarid raqami bo'yicha qidirish..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white border border-gray-100 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
@@ -133,37 +156,44 @@ const Purchases = () => {
             {filteredPurchases.map((purchase) => (
               <div
                 key={purchase.id}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between"
+                onClick={() => setViewPurchase(purchase)}
+                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:border-[#1447E6] transition-all"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1447E6] shrink-0">
-                    <FiTruck className="w-5 h-5" />
+                    <FiPackage className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-sm">{purchase.supplier_name}</h3>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                      {new Date(purchase.created_at).toLocaleDateString()}
+                    <h3 className="font-bold text-gray-900 text-sm">Xarid #{purchase.id}</h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {new Date(purchase.created_at).toLocaleDateString()} • {purchase.items?.length || 0} ta mahsulot
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm font-black text-gray-900">{parseFloat(purchase.total || 0).toLocaleString()} so'm</p>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${paymentBadgeClass(purchase.payment_method)}`}>
-                      {paymentMethodLabel(purchase.payment_method)}
-                    </span>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-black text-gray-900">{parseFloat(purchase.total || 0).toLocaleString()} so'm</p>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEditModal(purchase); }}
+                      className="w-8 h-8 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"
+                    >
+                      <FiEdit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm("Bu xaridni o'chirmoqchimisiz?")) {
+                          deletePurchaseMutation.mutate(purchase.id);
+                        }
+                      }}
+                      disabled={deletePurchaseMutation.isPending}
+                      className="w-8 h-8 bg-red-50 text-red-400 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                    >
+                      {deletePurchaseMutation.isPending
+                        ? <FiLoader className="animate-spin w-3 h-3" />
+                        : <FiTrash2 className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      if (window.confirm("Bu xaridni o'chirmoqchimisiz?")) {
-                        deletePurchaseMutation.mutate(purchase.id);
-                      }
-                    }}
-                    disabled={deletePurchaseMutation.isPending}
-                    className="w-9 h-9 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                  >
-                    {deletePurchaseMutation.isPending ? <FiLoader className="animate-spin w-3 h-3" /> : <FiTrash2 className="w-3.5 h-3.5" />}
-                  </button>
                 </div>
               </div>
             ))}
@@ -172,22 +202,22 @@ const Purchases = () => {
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm">
             <FiTruck className="w-12 h-12 text-gray-200 mx-auto mb-3" />
             <h3 className="text-base font-bold text-gray-900 mb-1">Xaridlar yo'q</h3>
-            <p className="text-gray-400 text-sm">Omborga mahsulot qabul qilish uchun + tugmasini bosing</p>
+            <p className="text-gray-400 text-sm">Omborga mahsulot qo'shish uchun + tugmasini bosing</p>
           </div>
         )}
       </div>
 
       {/* FAB */}
       <button
-        onClick={() => setIsNewPurchaseOpen(true)}
+        onClick={openCreateModal}
         className="fixed bottom-24 right-5 w-14 h-14 bg-[#1447E6] rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 text-white z-40 active:scale-95 transition-transform"
       >
         <FiPlus className="w-6 h-6" />
       </button>
 
-      {/* New Purchase Modal */}
+      {/* Create / Edit Modal */}
       <AnimatePresence>
-        {isNewPurchaseOpen && (
+        {modalMode && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col justify-end"
@@ -199,9 +229,11 @@ const Purchases = () => {
             >
               {/* Modal header */}
               <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-6 pb-5 flex items-center justify-between shrink-0">
-                <h2 className="text-white text-lg font-bold">Yangi Xarid</h2>
+                <h2 className="text-white text-lg font-bold">
+                  {modalMode === 'create' ? 'Yangi Xarid' : `Xaridni Tahrirlash #${editPurchaseId}`}
+                </h2>
                 <button
-                  onClick={() => setIsNewPurchaseOpen(false)}
+                  onClick={() => setModalMode(null)}
                   className="w-9 h-9 bg-white/20 text-white rounded-xl flex items-center justify-center hover:bg-white/30 transition-colors"
                 >
                   <FiX className="w-5 h-5" />
@@ -209,39 +241,10 @@ const Purchases = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Supplier selection */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Yetkazib Beruvchi</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {suppliers.map(s => (
-                      <button
-                        key={s.id}
-                        onClick={() => setSelectedSupplier(s)}
-                        className={`p-3 rounded-2xl border-2 transition-all text-left ${
-                          selectedSupplier?.id === s.id
-                            ? 'border-[#1447E6] bg-blue-50'
-                            : 'border-gray-100 bg-gray-50 hover:bg-gray-100'
-                        }`}
-                      >
-                        <p className={`font-bold text-sm ${selectedSupplier?.id === s.id ? 'text-[#1447E6]' : 'text-gray-700'}`}>{s.name}</p>
-                        {s.phone && <p className="text-[10px] text-gray-400 font-medium mt-0.5">{s.phone}</p>}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedSupplier && (
-                    <div className="mt-3 flex items-center gap-2 bg-blue-50 rounded-xl p-2.5">
-                      <div className="w-5 h-5 bg-[#1447E6] rounded-full flex items-center justify-center">
-                        <FiCheck className="w-3 h-3 text-white" />
-                      </div>
-                      <span className="text-xs font-semibold text-[#1447E6]">{selectedSupplier.name} tanlandi</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Product search & horizontal scroll */}
+                {/* Product search */}
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mahsulotlar</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mahsulot qo'shish</label>
                     <div className="relative w-40">
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                       <input
@@ -264,71 +267,180 @@ const Purchases = () => {
                           <FiPackage className="w-4 h-4" />
                         </div>
                         <p className="text-[10px] font-bold text-gray-900 truncate">{p.name}</p>
-                        <p className="text-[9px] text-[#1447E6] font-bold mt-0.5">{parseFloat(p.cost_price || 0).toLocaleString()} so'm</p>
+                        <p className="text-[9px] text-gray-400 mt-0.5">Ombor: {p.quantity} {p.unit}</p>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Cart */}
+                {/* Cart — with editable cost_price */}
                 {cart.length > 0 && (
                   <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                    <h3 className="text-sm font-bold text-gray-900 mb-3">Tanlangan Mahsulotlar</h3>
+                    <h3 className="text-sm font-bold text-gray-900 mb-3">Tanlangan mahsulotlar</h3>
                     <div className="space-y-2">
                       {cart.map(item => (
-                        <div key={item.id} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-gray-900 text-xs truncate">{item.name}</p>
-                            <p className="text-[10px] text-gray-400 font-semibold">{parseFloat(item.price || 0).toLocaleString()} so'm</p>
+                        <div key={item.id} className="bg-gray-50 rounded-xl p-3 space-y-2">
+                          {/* Name row */}
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold text-gray-900 text-sm truncate flex-1 mr-2">{item.name}</p>
+                            <button
+                              onClick={() => removeFromCart(item.id)}
+                              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-400 shrink-0 transition-colors"
+                            >
+                              <FiX className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center bg-white rounded-xl border border-gray-100 p-0.5">
-                              <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-[#1447E6]">
+                          {/* Controls row */}
+                          <div className="flex items-center gap-2">
+                            {/* Quantity stepper */}
+                            <div className="flex items-center bg-white rounded-lg border border-gray-200 shrink-0">
+                              <button
+                                onClick={() => updateQuantity(item.id, -1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-400 transition-colors"
+                              >
                                 <FiMinus className="w-3 h-3" />
                               </button>
-                              <span className="w-8 text-center font-black text-gray-900 text-xs">{item.quantity}</span>
-                              <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-[#1447E6]">
+                              <span className="w-7 text-center font-black text-gray-900 text-sm">{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.id, 1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#1447E6] transition-colors"
+                              >
                                 <FiPlus className="w-3 h-3" />
                               </button>
                             </div>
-                            <p className="text-xs font-black text-[#1447E6] min-w-[72px] text-right">
-                              {(parseFloat(item.price || 0) * item.quantity).toLocaleString()}
-                            </p>
+                            {/* Cost price input */}
+                            <div className="relative flex-1">
+                              <input
+                                type="number"
+                                value={item.costPrice}
+                                onChange={e => updateCostPrice(item.id, e.target.value)}
+                                placeholder="Narx"
+                                className="w-full pl-3 pr-10 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#1447E6]/40 focus:border-[#1447E6]"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">so'm</span>
+                            </div>
+                            {/* Subtotal */}
+                            <div className="text-right shrink-0 min-w-[68px]">
+                              <p className="text-sm font-black text-[#1447E6]">
+                                {(item.costPrice * item.quantity).toLocaleString()}
+                              </p>
+                              <p className="text-[9px] text-gray-400">so'm</p>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {/* Note */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Izoh (ixtiyoriy)</label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Xarid haqida izoh..."
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 px-4 text-xs focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] outline-none min-h-[70px] resize-none"
+                  />
+                </div>
               </div>
 
               {/* Footer */}
               <div className="px-4 py-4 border-t border-gray-100 bg-white shrink-0">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Umumiy Summa</p>
-                    <p className="text-2xl font-black text-gray-900">
-                      {getTotal().toLocaleString()} <span className="text-sm font-bold text-gray-400">so'm</span>
-                    </p>
-                  </div>
-                  {selectedSupplier && (
-                    <div className="text-right bg-blue-50 px-3 py-2 rounded-xl">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Taminotchi</p>
-                      <p className="text-sm font-bold text-[#1447E6]">{selectedSupplier.name}</p>
-                    </div>
-                  )}
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Umumiy summa</p>
+                  <p className="text-xl font-black text-gray-900">
+                    {getTotal().toLocaleString()} <span className="text-sm font-bold text-gray-400">so'm</span>
+                  </p>
                 </div>
                 <button
-                  onClick={handleCompletePurchase}
-                  disabled={createPurchaseMutation.isPending || cart.length === 0}
+                  onClick={handleSave}
+                  disabled={isPending || cart.length === 0}
                   className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {createPurchaseMutation.isPending ? <FiLoader className="animate-spin w-5 h-5" /> : <FiCheck className="w-5 h-5" />}
-                  Xaridni Saqlash
+                  {isPending ? <FiLoader className="animate-spin w-5 h-5" /> : <FiCheck className="w-5 h-5" />}
+                  {modalMode === 'create' ? 'Xaridni Saqlash' : "O'zgarishlarni Saqlash"}
                 </button>
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* View Detail Modal */}
+      <AnimatePresence>
+        {viewPurchase && (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto flex flex-col shadow-2xl relative"
+            >
+              {detailLoading && (
+                <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center rounded-3xl">
+                  <FiLoader className="w-8 h-8 text-[#1447E6] animate-spin" />
+                </div>
+              )}
+              <div className="flex items-center justify-between p-5 border-b border-gray-50">
+                <h2 className="text-lg font-bold text-gray-900">Xarid #{viewPurchase.id}</h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      openEditModal(purchaseDetail || viewPurchase);
+                      setViewPurchase(null);
+                    }}
+                    className="w-8 h-8 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"
+                  >
+                    <FiEdit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewPurchase(null)}
+                    className="w-8 h-8 bg-gray-100 text-gray-500 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <FiX className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-5">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sana</p>
+                <p className="text-sm font-bold text-gray-900 mb-5">
+                  {new Date(viewPurchase.created_at).toLocaleString()}
+                </p>
+
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Mahsulotlar</h3>
+                <div className="space-y-2 mb-5">
+                  {(purchaseDetail || viewPurchase).items?.map(item => (
+                    <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-900">{item.product_name}</p>
+                        <p className="text-[10px] text-gray-500">
+                          {item.quantity} × {parseFloat(item.cost_price || 0).toLocaleString()} so'm
+                        </p>
+                      </div>
+                      <p className="text-sm font-black text-[#1447E6]">
+                        {parseFloat(item.subtotal || 0).toLocaleString()} so'm
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {(purchaseDetail || viewPurchase).note && (
+                  <div className="mb-5 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">Izoh</p>
+                    <p className="text-sm text-orange-800">{(purchaseDetail || viewPurchase).note}</p>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
+                  <span className="text-sm font-bold text-gray-500">Jami summa:</span>
+                  <span className="text-xl font-black text-gray-900">
+                    {parseFloat((purchaseDetail || viewPurchase).total || 0).toLocaleString()} so'm
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

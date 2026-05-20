@@ -66,6 +66,16 @@ const customerService = {
   },
 
   /**
+   * Get sales history for a customer
+   * @param {number} id
+   * @returns {Promise<any[]>}
+   */
+  getCustomerSalesHistory: async (id) => {
+    const response = await api.get(`/api/customers/${id}/sales-history/`);
+    return response.data;
+  },
+
+  /**
    * Get VIP customers
    * @returns {Promise<Customer[]>}
    */
@@ -102,6 +112,27 @@ const customerService = {
    */
   sendDebtReminder: async (id) => {
     const response = await api.post(`/api/customers/${id}/send-debt-reminder/`);
+    return response.data;
+  },
+
+  /**
+   * Send custom message to customer
+   * @param {number} id
+   * @param {Object} data - { text }
+   * @returns {Promise<any>}
+   */
+  sendMessage: async (id, data) => {
+    const response = await api.post(`/api/customers/${id}/send-message/`, data);
+    return response.data;
+  },
+
+  /**
+   * Get message history
+   * @param {number} id
+   * @returns {Promise<any[]>}
+   */
+  getMessageHistory: async (id) => {
+    const response = await api.get(`/api/customers/${id}/message-history/`);
     return response.data;
   },
 

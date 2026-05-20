@@ -2,7 +2,6 @@ import api from './api';
 
 /**
  * @typedef {import('../types/api.types').Purchase} Purchase
- * @typedef {import('../types/api.types').Supplier} Supplier
  * @typedef {import('../types/api.types').PaginatedResponse} PaginatedResponse
  */
 
@@ -44,7 +43,7 @@ const purchaseService = {
    * @returns {Promise<Purchase>}
    */
   updatePurchase: async (id, data) => {
-    const response = await api.patch(`/api/purchases/${id}/`, data);
+    const response = await api.put(`/api/purchases/${id}/`, data);
     return response.data;
   },
 
@@ -54,55 +53,6 @@ const purchaseService = {
    */
   deletePurchase: async (id) => {
     await api.delete(`/api/purchases/${id}/`);
-  },
-
-  /**
-   * Get list of suppliers
-   * @param {Object} params - { search, page }
-   * @returns {Promise<PaginatedResponse<Supplier>>}
-   */
-  getSuppliers: async (params) => {
-    const response = await api.get('/api/purchases/suppliers/', { params });
-    return response.data;
-  },
-
-  /**
-   * Create a new supplier
-   * @param {Object} data
-   * @returns {Promise<Supplier>}
-   */
-  createSupplier: async (data) => {
-    const response = await api.post('/api/purchases/suppliers/', data);
-    return response.data;
-  },
-
-  /**
-   * Update supplier
-   * @param {number} id
-   * @param {Object} data
-   * @returns {Promise<Supplier>}
-   */
-  updateSupplier: async (id, data) => {
-    const response = await api.patch(`/api/purchases/suppliers/${id}/`, data);
-    return response.data;
-  },
-
-  /**
-   * Get single supplier
-   * @param {number} id
-   * @returns {Promise<Supplier>}
-   */
-  getSupplier: async (id) => {
-    const response = await api.get(`/api/purchases/suppliers/${id}/`);
-    return response.data;
-  },
-
-  /**
-   * Delete supplier
-   * @param {number} id
-   */
-  deleteSupplier: async (id) => {
-    await api.delete(`/api/purchases/suppliers/${id}/`);
   }
 };
 

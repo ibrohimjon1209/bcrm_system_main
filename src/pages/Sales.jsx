@@ -69,13 +69,12 @@ const Sales = () => {
 
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
 
-  const getTotal = () => cart.reduce((total, item) => total + (parseFloat(item.price || 0) * item.quantity), 0);
+  const getDefaultTotal = () => cart.reduce((total, item) => total + (parseFloat(item.price || 0) * item.quantity), 0);
 
-  const getRemainingDebt = () => {
-    const total = getTotal();
-    const paid = parseFloat(paidAmount) || 0;
-    return Math.max(0, total - paid);
-  };
+  // Custom sale price entered by user overrides product prices
+  const customSaleAmount = parseFloat(paidAmount) || 0;
+  const hasCustomAmount = paidAmount !== '' && customSaleAmount > 0 && paymentType !== 'debt';
+  const getTotal = () => hasCustomAmount ? customSaleAmount : getDefaultTotal();
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) return;
@@ -83,14 +82,18 @@ const Sales = () => {
       toast.error('Mijozni tanlang');
       return;
     }
+
+    // Scale item prices so their total matches the custom amount
+    const defaultTotal = getDefaultTotal();
+    const scaleFactor = (hasCustomAmount && defaultTotal > 0) ? customSaleAmount / defaultTotal : 1;
+
     const payload = {
       customer: selectedCustomer.id,
       payment_method: paymentType,
-      paid_amount: paymentType === 'debt' ? 0 : (paidAmount ? parseFloat(paidAmount) : getTotal()),
       items: cart.map(item => ({
         product: item.id,
         quantity: item.quantity,
-        price: item.price
+        price: parseFloat((item.price * scaleFactor).toFixed(2))
       }))
     };
     try {
@@ -204,14 +207,6 @@ const Sales = () => {
             )}
           </div>
 
-          <div className="flex gap-3">
-            <button className="flex-1 px-4 py-3 bg-[#1447E6] text-white rounded-2xl font-bold flex items-center justify-center gap-2 text-sm">
-              <FiSend className="w-4 h-4" /> PDF
-            </button>
-            <button className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-2xl font-semibold flex items-center justify-center gap-2 text-sm">
-              <FiShare2 className="w-4 h-4" /> Ulashish
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -388,38 +383,41 @@ const Sales = () => {
             {paymentType !== 'debt' && (
               <div className="mb-4">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  To'langan summa
+                  Sotuv narxi (mahsulot narxini o'zgartirish uchun)
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    placeholder="Summani kiriting..."
+                    placeholder="Maxsus narx kiriting..."
                     value={paidAmount}
                     onChange={(e) => setPaidAmount(e.target.value)}
                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setPaidAmount(getTotal().toString())}
-                    className="px-3 py-3 bg-[#1447E6] text-white rounded-xl text-xs font-bold whitespace-nowrap hover:bg-blue-700 transition-colors"
-                  >
-                    To'liq summa
-                  </button>
+                  {paidAmount !== '' && (
+                    <button
+                      type="button"
+                      onClick={() => setPaidAmount('')}
+                      className="px-3 py-3 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold whitespace-nowrap hover:bg-gray-200 transition-colors"
+                    >
+                      Tozalash
+                    </button>
+                  )}
                 </div>
+                {hasCustomAmount && (
+                  <p className="text-[10px] text-blue-500 mt-1.5 font-semibold">
+                    Standart narx: {getDefaultTotal().toLocaleString()} so'm → Maxsus: {customSaleAmount.toLocaleString()} so'm
+                  </p>
+                )}
               </div>
             )}
 
             <div className="pt-3 border-t border-gray-100 space-y-2 mb-4">
               <div className="flex justify-between font-bold text-gray-900">
                 <span className="text-sm">Jami:</span>
-                <span className="text-base">{getTotal().toLocaleString()} so'm</span>
+                <span className={`text-base ${hasCustomAmount ? 'text-blue-600' : ''}`}>
+                  {getTotal().toLocaleString()} so'm
+                </span>
               </div>
-              {paymentType !== 'debt' && paidAmount && (
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-gray-400">Qolgan qarz:</span>
-                  <span className="text-red-500">{getRemainingDebt().toLocaleString()} so'm</span>
-                </div>
-              )}
             </div>
 
             <button

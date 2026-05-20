@@ -6,7 +6,26 @@ export const usePurchases = (params) => {
   return useQuery({
     queryKey: ['purchases', params],
     queryFn: () => purchaseService.getPurchases(params),
+    staleTime: 0,
   });
+};
+
+export const usePurchaseDetail = (id) => {
+  return useQuery({
+    queryKey: ['purchase-detail', id],
+    queryFn: () => purchaseService.getPurchase(id),
+    enabled: !!id && typeof id === 'number',
+    staleTime: 0,
+  });
+};
+
+const getErrMsg = (err) => {
+  const d = err?.response?.data;
+  if (!d) return 'Xatolik yuz berdi';
+  if (typeof d === 'string') return d;
+  if (d.detail) return d.detail;
+  const first = Object.values(d)[0];
+  return Array.isArray(first) ? first[0] : (first || 'Xatolik yuz berdi');
 };
 
 export const useCreatePurchase = () => {
@@ -14,28 +33,11 @@ export const useCreatePurchase = () => {
   return useMutation({
     mutationFn: (data) => purchaseService.createPurchase(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] }); // Stock increases
+      queryClient.refetchQueries({ queryKey: ['purchases'] });
+      queryClient.refetchQueries({ queryKey: ['products'] });
       toast.success('Xarid muvaffaqiyatli saqlandi');
     },
-  });
-};
-
-export const useSuppliers = (params) => {
-  return useQuery({
-    queryKey: ['suppliers', params],
-    queryFn: () => purchaseService.getSuppliers(params),
-  });
-};
-
-export const useCreateSupplier = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data) => purchaseService.createSupplier(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast.success('Yetkazib beruvchi muvaffaqiyatli qo\'shildi');
-    },
+    onError: (err) => toast.error(getErrMsg(err)),
   });
 };
 
@@ -44,9 +46,11 @@ export const useUpdatePurchase = () => {
   return useMutation({
     mutationFn: ({ id, data }) => purchaseService.updatePurchase(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.refetchQueries({ queryKey: ['purchases'] });
+      queryClient.refetchQueries({ queryKey: ['products'] });
       toast.success('Xarid muvaffaqiyatli yangilandi');
     },
+    onError: (err) => toast.error(getErrMsg(err)),
   });
 };
 
@@ -55,31 +59,11 @@ export const useDeletePurchase = () => {
   return useMutation({
     mutationFn: (id) => purchaseService.deletePurchase(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.refetchQueries({ queryKey: ['purchases'] });
+      queryClient.refetchQueries({ queryKey: ['products'] });
       toast.success("Xarid muvaffaqiyatli o'chirildi");
     },
+    onError: (err) => toast.error(getErrMsg(err)),
   });
 };
 
-export const useUpdateSupplier = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }) => purchaseService.updateSupplier(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast.success('Yetkazib beruvchi muvaffaqiyatli yangilandi');
-    },
-  });
-};
-
-export const useDeleteSupplier = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => purchaseService.deleteSupplier(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast.success("Yetkazib beruvchi muvaffaqiyatli o'chirildi");
-    },
-  });
-};

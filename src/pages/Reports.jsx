@@ -181,7 +181,6 @@ const Reports = () => {
                     { label: 'Tushum', value: revenue ?? dashStats?.total_revenue, color: 'bg-[#1447E6]',   text: 'text-[#1447E6]'   },
                     { label: 'Foyda',  value: profit  ?? dashStats?.total_profit,  color: 'bg-emerald-500', text: 'text-emerald-600' },
                     { label: 'Xarid xarajati', value: profitData?.purchase_cost || dashStats?.purchase_cost || 0, color: 'bg-red-500', text: 'text-red-500' },
-                    { label: 'Sotuv xarajati', value: profitData?.sale_cost || dashStats?.sale_cost || 0, color: 'bg-orange-500', text: 'text-orange-600' },
                   ].map((row, i) => {
                     const max = parseFloat(revenue ?? dashStats?.total_revenue ?? 1) || 1;
                     const pct = Math.min(100, (parseFloat(row.value || 0) / max) * 100);

@@ -102,10 +102,10 @@ const Login = () => {
             </div>
             
             {/* App name */}
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">BalonCRM</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">BiCRM</h1>
             
             {/* Tagline */}
-            <p className="text-sm text-gray-600">Biznesingizni boshqaring oson va tez</p>
+            <p className="text-sm text-gray-600">Biznesingizni oson va tez boshqaring</p>
           </div>
 
           {/* Form Section */}
