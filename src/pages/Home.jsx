@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FiBell, FiShoppingCart, FiUsers, FiPackage, FiBarChart2,
   FiLoader, FiTrendingUp, FiAlertCircle
@@ -43,15 +43,14 @@ const Home = () => {
   const span = (formatted) => formatted.length > 9 ? 'col-span-2 md:col-span-1' : 'col-span-1';
 
   const quickActions = [
-    { label: 'Sotuv',    icon: FiShoppingCart, path: '/sales',     bg: 'bg-blue-50',   color: 'text-[#1447E6]'    },
-    { label: 'Mijozlar', icon: FiUsers,         path: '/customers', bg: 'bg-purple-50', color: 'text-purple-600'   },
-    { label: 'Ombor',    icon: FiPackage,       path: '/warehouse', bg: 'bg-emerald-50',color: 'text-emerald-600'  },
-    { label: 'Hisobot',  icon: FiBarChart2,     path: '/reports',   bg: 'bg-orange-50', color: 'text-orange-600'   },
+    { label: 'Sotuv', icon: FiShoppingCart, path: '/sales', bg: 'bg-blue-50', color: 'text-[#1447E6]' },
+    { label: 'Mijozlar', icon: FiUsers, path: '/customers', bg: 'bg-purple-50', color: 'text-purple-600' },
+    { label: 'Ombor', icon: FiPackage, path: '/warehouse', bg: 'bg-emerald-50', color: 'text-emerald-600' },
+    { label: 'Hisobot', icon: FiBarChart2, path: '/reports', bg: 'bg-orange-50', color: 'text-orange-600' },
   ];
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] pb-28 md:pb-8 font-sans">
-
       {/* ── Header ── */}
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-16 md:pb-10 relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
@@ -77,29 +76,37 @@ const Home = () => {
 
           {/* Stats grid — each card spans full width only if its number is long */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
-            <div className={`${span(totalRevenue.toLocaleString())} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
-              <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Tushum</p>
-              <p className="text-white text-lg md:text-xl font-black leading-tight">{totalRevenue.toLocaleString()}</p>
-              <p className="text-blue-300 text-[10px] font-medium">so'm</p>
-            </div>
-            <div className={`${span(totalProfit.toLocaleString())} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
-              <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Foyda</p>
-              <p className="text-white text-lg md:text-xl font-black leading-tight">{totalProfit.toLocaleString()}</p>
-              <p className="text-blue-300 text-[10px] font-medium">so'm</p>
-            </div>
+            <Link to='/reports'>
+              <div className={`${span(totalRevenue.toLocaleString())} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
+                <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Tushum</p>
+                <p className="text-white text-lg md:text-xl font-black leading-tight">{totalRevenue.toLocaleString()}</p>
+                <p className="text-blue-300 text-[10px] font-medium">so'm</p>
+              </div>
+            </Link>
+
+            <Link to='/reports'>
+              <div className={`${span(totalProfit.toLocaleString())} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
+                <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Foyda</p>
+                <p className="text-white text-lg md:text-xl font-black leading-tight">{totalProfit.toLocaleString()}</p>
+                <p className="text-blue-300 text-[10px] font-medium">so'm</p>
+              </div>
+            </Link>
+            
             <button
               onClick={() => navigate('/customers', { state: { filter: 'Qarzdorlar' } })}
-              className={`${span(String(debtorsCount))} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20 text-left hover:bg-white/20 transition-colors`}
+              className={`${span(String(debtorsCount))} cursor-pointer bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20 text-left hover:bg-white/20 transition-colors`}
             >
               <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Qarzdorlar</p>
               <p className="text-white text-lg md:text-xl font-black leading-tight">{debtorsCount}</p>
               <p className="text-blue-300 text-[10px] font-medium">ta mijoz</p>
             </button>
+            <Link to='/warehouse'>
             <div className={`${span(String(totalProductsCount))} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
               <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Mahsulotlar</p>
               <p className="text-white text-lg md:text-xl font-black leading-tight">{totalProductsCount}</p>
               <p className="text-blue-300 text-[10px] font-medium">dona</p>
             </div>
+            </Link>
           </div>
         </div>
       </div>
@@ -161,6 +168,7 @@ const Home = () => {
 
             {/* Recent sales */}
             {!salesLoading && recentSales.length > 0 && (
+              <Link to='/customers'>
               <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5">
                 <h2 className="text-sm font-bold text-gray-700 mb-3">So'nggi sotuvlar</h2>
                 <div className="space-y-2">
@@ -180,6 +188,7 @@ const Home = () => {
                   ))}
                 </div>
               </div>
+              </Link>
             )}
 
             {/* Low stock */}

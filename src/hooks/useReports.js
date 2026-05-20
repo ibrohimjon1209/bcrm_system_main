@@ -14,11 +14,10 @@ export const useDashboardStats = (period) => {
   });
 };
 
-export const useProfitReport = (date_from, date_to) => {
-  return useQuery({
-    queryKey: ['reports', 'profit', date_from, date_to],
-    queryFn: () => reportService.getProfitReport(date_from, date_to),
-    enabled: !!date_from && !!date_to,
+  export const useProfitReport = (date_from, date_to) => {
+    return useQuery({
+      queryKey: ['reports', 'profit', date_from, date_to],
+      queryFn: () => reportService.getProfitReport(date_from, date_to),
     retry: (failureCount, error) => {
       if (error?.response?.status >= 500) return false;
       return failureCount < 1;

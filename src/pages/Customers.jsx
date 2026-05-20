@@ -341,7 +341,7 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt }) => {
   );
 };
 
-const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }) => {
+export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }) => {
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',

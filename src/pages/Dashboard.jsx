@@ -1,23 +1,27 @@
 import React from 'react';
 import { FiShoppingCart, FiUsers, FiTrendingUp, FiPackage, FiArrowUpRight, FiLoader, FiActivity, FiCalendar } from 'react-icons/fi';
-import { useDashboardStats } from '../hooks/useReports';
+import { useDashboardStats, useProfitReport } from '../hooks/useReports';
 import { useSales } from '../hooks/useSales';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading, isError: statsError } = useDashboardStats('today');
+  const { data: profitData, isLoading: profitLoading } = useProfitReport('', '');
   const { data: recentSalesData, isLoading: salesLoading } = useSales({});
 
   const recentSales = recentSalesData?.results || [];
 
   const statCards = [
     {
-      title: 'Bugungi Sotuv',
-      value: stats?.total_revenue || 0,
-      sub: `${stats?.total_sales_count || 0} ta buyurtma`,
+      title: 'Umumiy Tushum',
+      value: profitData?.revenue || 0,
+      sub: `Jami tushum`,
       icon: FiShoppingCart,
       bg: 'bg-blue-50',
       color: 'text-[#1447E6]',
-      isCurrency: true
+      isCurrency: true,
+      onClick: () => navigate('/reports')
     },
     {
       title: 'Faol Mijozlar',
@@ -30,16 +34,17 @@ const Dashboard = () => {
     },
     {
       title: 'Sof Foyda',
-      value: stats?.total_profit || 0,
-      sub: 'Bugungi ko\'rsatkich',
+      value: profitData?.net_profit || profitData?.profit || 0,
+      sub: 'Jami foyda',
       icon: FiTrendingUp,
       bg: 'bg-emerald-50',
       color: 'text-emerald-600',
-      isCurrency: true
+      isCurrency: true,
+      onClick: () => navigate('/reports')
     }
   ];
 
-  if (statsLoading || salesLoading) {
+  if (statsLoading || salesLoading || profitLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F0F4FF]">
         <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />
@@ -92,7 +97,8 @@ const Dashboard = () => {
           {statCards.map((card, i) => (
             <div
               key={i}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 group hover:border-[#1447E6]/30 hover:shadow-md transition-all duration-300"
+              onClick={card.onClick}
+              className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 group hover:border-[#1447E6]/30 hover:shadow-md transition-all duration-300 ${card.onClick ? 'cursor-pointer' : ''}`}
             >
               <div className="flex items-start justify-between mb-5">
                 <div className={`w-12 h-12 ${card.bg} rounded-2xl flex items-center justify-center`}>

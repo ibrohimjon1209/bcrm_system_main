@@ -4,9 +4,11 @@ import {
   FiArrowLeft, FiPackage, FiLoader, FiShoppingCart, FiUser
 } from 'react-icons/fi';
 import { useProducts } from '../hooks/useProducts';
-import { useCustomers } from '../hooks/useCustomers';
+import { useCustomers, useCreateCustomer } from '../hooks/useCustomers';
 import { useCreateSale } from '../hooks/useSales';
 import { toast } from 'react-toastify';
+import { AddEditCustomerModal } from './Customers';
+import { AnimatePresence } from 'framer-motion';
 
 const Sales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -17,10 +19,12 @@ const Sales = () => {
   const [showCompletion, setShowCompletion] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCreatedSale, setLastCreatedSale] = useState(null);
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
 
   const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm });
   const { data: customersData } = useCustomers();
   const createSaleMutation = useCreateSale();
+  const createCustomerMutation = useCreateCustomer();
 
   const products = productsData?.results || [];
   const customers = customersData?.results || [];
@@ -93,7 +97,7 @@ const Sales = () => {
       const result = await createSaleMutation.mutateAsync(payload);
       setLastCreatedSale(result);
       setShowCompletion(true);
-    } catch (error) {}
+    } catch (error) { }
   };
 
   const handleViewReceipt = () => {
@@ -229,24 +233,32 @@ const Sales = () => {
         {/* Customer selector */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Mijozni tanlash</label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiUser className="text-gray-400 w-4 h-4" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiUser className="text-gray-400 w-4 h-4" />
+              </div>
+              <select
+                value={selectedCustomer?.id || ''}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  const customer = customers.find(c => c.id.toString() === id);
+                  setSelectedCustomer(customer || null);
+                }}
+                className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all text-gray-900 font-medium text-sm appearance-none outline-none"
+              >
+                <option value="">Mijozni tanlang...</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
+                ))}
+              </select>
             </div>
-            <select
-              value={selectedCustomer?.id || ''}
-              onChange={(e) => {
-                const id = e.target.value;
-                const customer = customers.find(c => c.id.toString() === id);
-                setSelectedCustomer(customer || null);
-              }}
-              className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all text-gray-900 font-medium text-sm appearance-none outline-none"
+            <button
+              onClick={() => setIsAddCustomerModalOpen(true)}
+              className="w-[46px] h-[46px] shrink-0 bg-[#1447E6] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center transition-colors shadow-sm"
             >
-              <option value="">Mijozni tanlang...</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
-              ))}
-            </select>
+              <FiPlus className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -275,19 +287,17 @@ const Sales = () => {
               <div
                 key={product.id}
                 onClick={() => addToCart(product)}
-                className={`group cursor-pointer bg-white rounded-2xl p-3 border transition-all duration-200 ${
-                  product.quantity <= 0
-                    ? 'opacity-50 grayscale border-gray-100'
-                    : 'border-gray-100 hover:border-[#1447E6] hover:shadow-md active:scale-95'
-                }`}
+                className={`group cursor-pointer bg-white rounded-2xl p-3 border transition-all duration-200 ${product.quantity <= 0
+                  ? 'opacity-50 grayscale border-gray-100'
+                  : 'border-gray-100 hover:border-[#1447E6] hover:shadow-md active:scale-95'
+                  }`}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
                     <FiPackage className="w-4 h-4 text-[#1447E6]" />
                   </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${
-                    product.quantity <= 0 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
-                  }`}>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${product.quantity <= 0 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
+                    }`}>
                     {product.quantity <= 0 ? 'Yo\'q' : `${product.quantity} ${product.unit}`}
                   </span>
                 </div>
@@ -365,11 +375,10 @@ const Sales = () => {
                     if (type.id === 'debt') setPaidAmount('0');
                     else setPaidAmount('');
                   }}
-                  className={`py-2.5 rounded-xl font-bold text-xs transition-all ${
-                    paymentType === type.id
-                      ? 'bg-[#1447E6] text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
+                  className={`py-2.5 rounded-xl font-bold text-xs transition-all ${paymentType === type.id
+                    ? 'bg-[#1447E6] text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
                 >
                   {type.label}
                 </button>
@@ -424,6 +433,21 @@ const Sales = () => {
           </div>
         )}
       </div>
+      <AnimatePresence>
+        {isAddCustomerModalOpen && (
+          <AddEditCustomerModal
+            onClose={() => setIsAddCustomerModalOpen(false)}
+            onSave={async (data) => {
+              try {
+                const newCustomer = await createCustomerMutation.mutateAsync(data);
+                setSelectedCustomer(newCustomer || null);
+                setIsAddCustomerModalOpen(false);
+              } catch (error) {}
+            }}
+            isPending={createCustomerMutation.isPending}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

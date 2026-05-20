@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FiTrendingUp, FiDollarSign, FiShoppingCart, FiCreditCard,
   FiPackage, FiBarChart2, FiLoader, FiUsers, FiAlertCircle
@@ -33,6 +34,7 @@ const StatCard = ({ icon: Icon, bg, color, title, value, sub, loading }) => (
 );
 
 const Reports = () => {
+  const navigate = useNavigate();
   const [activeTab,   setActiveTab]   = useState('dashboard');
   const [dashPeriod,  setDashPeriod]  = useState('7 kun');
 
@@ -178,6 +180,8 @@ const Reports = () => {
                   {[
                     { label: 'Tushum', value: revenue ?? dashStats?.total_revenue, color: 'bg-[#1447E6]',   text: 'text-[#1447E6]'   },
                     { label: 'Foyda',  value: profit  ?? dashStats?.total_profit,  color: 'bg-emerald-500', text: 'text-emerald-600' },
+                    { label: 'Xarid xarajati', value: profitData?.purchase_cost || dashStats?.purchase_cost || 0, color: 'bg-red-500', text: 'text-red-500' },
+                    { label: 'Sotuv xarajati', value: profitData?.sale_cost || dashStats?.sale_cost || 0, color: 'bg-orange-500', text: 'text-orange-600' },
                   ].map((row, i) => {
                     const max = parseFloat(revenue ?? dashStats?.total_revenue ?? 1) || 1;
                     const pct = Math.min(100, (parseFloat(row.value || 0) / max) * 100);
@@ -199,7 +203,10 @@ const Reports = () => {
 
             {/* Top products from dashboard */}
             {dashStats?.top_products?.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div 
+                onClick={() => navigate('/warehouse')}
+                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:border-[#1447E6]/30 transition-colors"
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
                     <FiPackage className="w-4 h-4 text-[#1447E6]" />
@@ -223,7 +230,10 @@ const Reports = () => {
 
             {/* Top customers from dashboard */}
             {dashStats?.top_customers?.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div 
+                onClick={() => navigate('/customers')}
+                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:border-purple-600/30 transition-colors"
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center">
                     <FiUsers className="w-4 h-4 text-purple-600" />
@@ -249,7 +259,10 @@ const Reports = () => {
 
             {/* Debtors list */}
             {debtors.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div 
+                onClick={() => navigate('/customers', { state: { filter: 'Qarzdorlar' } })}
+                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:border-red-500/30 transition-colors"
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center">
                     <FiUsers className="w-4 h-4 text-red-500" />
