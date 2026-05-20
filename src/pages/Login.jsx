@@ -34,28 +34,26 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate validation
+
+    const cleanPhone = cleanPhoneNumber(formData.phone);
     const newErrors = {};
     if (!formData.phone || formData.phone === '+998') {
       newErrors.phone = 'Telefon raqamni kiriting';
     } else if (cleanPhone.length < 13) {
       newErrors.phone = 'Telefon raqam to\'liq emas';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Parolni kiriting';
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setIsLoading(false);
       return;
     }
-    
-    // Actual API call
+
     try {
-      const cleanPhone = cleanPhoneNumber(formData.phone);
       await login({
         phone: cleanPhone,
         password: formData.password
