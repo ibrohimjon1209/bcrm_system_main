@@ -56,16 +56,7 @@ const Purchases = () => {
     );
   };
 
-  const updateCostPrice = (id, value) => {
-    setCart(cart.map(item =>
-      item.id === id ? { ...item, costPrice: parseFloat(value) || 0 } : item
-    ));
-  };
-
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
-
-  const getTotal = () =>
-    cart.reduce((sum, item) => sum + item.costPrice * item.quantity, 0);
 
   const openCreateModal = () => {
     setCart([]);
@@ -308,24 +299,6 @@ const Purchases = () => {
                                 <FiPlus className="w-3 h-3" />
                               </button>
                             </div>
-                            {/* Cost price input */}
-                            <div className="relative flex-1">
-                              <input
-                                type="number"
-                                value={item.costPrice}
-                                onChange={e => updateCostPrice(item.id, e.target.value)}
-                                placeholder="Narx"
-                                className="w-full pl-3 pr-10 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#1447E6]/40 focus:border-[#1447E6]"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">so'm</span>
-                            </div>
-                            {/* Subtotal */}
-                            <div className="text-right shrink-0 min-w-[68px]">
-                              <p className="text-sm font-black text-[#1447E6]">
-                                {(item.costPrice * item.quantity).toLocaleString()}
-                              </p>
-                              <p className="text-[9px] text-gray-400">so'm</p>
-                            </div>
                           </div>
                         </div>
                       ))}
@@ -347,12 +320,6 @@ const Purchases = () => {
 
               {/* Footer */}
               <div className="px-4 py-4 border-t border-gray-100 bg-white shrink-0">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Umumiy summa</p>
-                  <p className="text-xl font-black text-gray-900">
-                    {getTotal().toLocaleString()} <span className="text-sm font-bold text-gray-400">so'm</span>
-                  </p>
-                </div>
                 <button
                   onClick={handleSave}
                   disabled={isPending || cart.length === 0}
