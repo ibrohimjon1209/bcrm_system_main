@@ -22,8 +22,10 @@ const Home = () => {
 
   const recentSales = (recentSalesData?.results || []).slice(0, 5);
 
-  const totalRevenue = parseFloat(stats?.total_revenue || stats?.revenue || 0);
-  const totalProfit = parseFloat(stats?.total_profit || stats?.profit || stats?.net_profit || 0);
+  const revUZS = parseFloat(stats?.revenue_by_currency?.UZS ?? stats?.revenue ?? 0);
+  const revUSD = parseFloat(stats?.revenue_by_currency?.USD ?? 0);
+  const profUZS = parseFloat(stats?.profit_by_currency?.UZS ?? stats?.profit ?? 0);
+  const profUSD = parseFloat(stats?.profit_by_currency?.USD ?? 0);
 
   const chartData = stats?.daily_chart?.map(item => ({
     name: item.date,
@@ -77,18 +79,18 @@ const Home = () => {
           {/* Stats grid — each card spans full width only if its number is long */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
             <Link to='/reports'>
-              <div className={`${span(totalRevenue.toLocaleString())} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
+              <div className="col-span-2 md:col-span-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20">
                 <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Tushum</p>
-                <p className="text-white text-lg md:text-xl font-black leading-tight">{totalRevenue.toLocaleString()}</p>
-                <p className="text-blue-300 text-[10px] font-medium">so'm</p>
+                <p className="text-white text-base md:text-lg font-black leading-tight">{revUZS.toLocaleString()} so'm</p>
+                <p className="text-blue-200 text-sm font-bold mt-0.5">{revUSD.toLocaleString()} $</p>
               </div>
             </Link>
 
             <Link to='/reports'>
-              <div className={`${span(totalProfit.toLocaleString())} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
+              <div className="col-span-2 md:col-span-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20">
                 <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Foyda</p>
-                <p className="text-white text-lg md:text-xl font-black leading-tight">{totalProfit.toLocaleString()}</p>
-                <p className="text-blue-300 text-[10px] font-medium">so'm</p>
+                <p className="text-white text-base md:text-lg font-black leading-tight">{profUZS.toLocaleString()} so'm</p>
+                <p className="text-blue-200 text-sm font-bold mt-0.5">{profUSD.toLocaleString()} $</p>
               </div>
             </Link>
             

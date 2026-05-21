@@ -10,52 +10,69 @@ import {
 
 const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
 
-const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending }) => (
-  <div className="p-4 space-y-4">
-    <div>
-      <label className="block text-xs font-semibold text-gray-500 mb-1.5">Mahsulot nomi</label>
-      <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Mahsulot nomini kiriting" />
-    </div>
-    <div className="grid grid-cols-2 gap-3">
+const currencySelectClass = "px-3 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
+
+const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending }) => {
+  const handleCurrencyChange = (currency) => {
+    setFormData({ ...formData, cost_currency: currency, sale_currency: currency });
+  };
+
+  return (
+    <div className="p-4 space-y-4">
       <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
-        <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
-          <option value="">Tanlang...</option>
-          {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-        </select>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Mahsulot nomi</label>
+        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Mahsulot nomini kiriting" />
       </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
-        <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className={inputClass}>
-          <option value="dona">Dona</option>
-          <option value="kg">Kg</option>
-          <option value="litr">Litr</option>
-          <option value="metr">Metr</option>
-        </select>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
+          <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
+            <option value="">Tanlang...</option>
+            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
+          <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className={inputClass}>
+            <option value="dona">Dona</option>
+            <option value="kg">Kg</option>
+            <option value="litr">Litr</option>
+            <option value="metr">Metr</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
+          <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className={inputClass} placeholder="0" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Valyuta</label>
+          <select value={formData.cost_currency} onChange={(e) => handleCurrencyChange(e.target.value)} className={currencySelectClass + ' w-full'}>
+            <option value="UZS">UZS (so'm)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
+          <input type="number" value={formData.cost_price} onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })} className={inputClass} placeholder="0" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi</label>
+          <input type="number" value={formData.sale_price} onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })} className={inputClass} placeholder="0" />
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <button onClick={onSubmit} disabled={isPending || !formData.name || !formData.sale_price} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+          {isPending && <FiLoader className="animate-spin w-4 h-4" />}
+          {submitLabel}
+        </button>
       </div>
     </div>
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
-        <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className={inputClass} placeholder="0" />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
-        <input type="number" value={formData.cost_price} onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })} className={inputClass} placeholder="0" />
-      </div>
-    </div>
-    <div>
-      <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi (so'm)</label>
-      <input type="number" value={formData.sale_price} onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })} className={inputClass} placeholder="0" />
-    </div>
-    <div className="flex gap-3 pt-2">
-      <button onClick={onSubmit} disabled={isPending || !formData.name || !formData.sale_price} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-        {isPending && <FiLoader className="animate-spin w-4 h-4" />}
-        {submitLabel}
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 const statusConfig = {
   good: { label: 'Yaxshi', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
@@ -82,7 +99,9 @@ const Warehouse = () => {
     quantity: '',
     sale_price: '',
     cost_price: '',
-    unit: 'dona'
+    unit: 'dona',
+    cost_currency: 'UZS',
+    sale_currency: 'UZS',
   });
 
   const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm });
@@ -97,7 +116,9 @@ const Warehouse = () => {
         quantity: singleProduct.quantity.toString(),
         sale_price: singleProduct.sale_price,
         cost_price: singleProduct.cost_price || '',
-        unit: singleProduct.unit || 'dona'
+        unit: singleProduct.unit || 'dona',
+        cost_currency: singleProduct.cost_currency || 'UZS',
+        sale_currency: singleProduct.sale_currency || 'UZS',
       });
     }
   }, [singleProduct, showEditModal]);
@@ -123,7 +144,9 @@ const Warehouse = () => {
         category: formData.category ? parseInt(formData.category) : null,
         quantity: parseInt(formData.quantity),
         sale_price: formData.sale_price,
+        sale_currency: formData.sale_currency,
         cost_price: formData.cost_price,
+        cost_currency: formData.cost_currency,
         unit: formData.unit
       });
       setShowAddModal(false);
@@ -140,7 +163,9 @@ const Warehouse = () => {
           category: formData.category ? parseInt(formData.category) : null,
           quantity: parseInt(formData.quantity),
           sale_price: formData.sale_price,
+          sale_currency: formData.sale_currency,
           cost_price: formData.cost_price,
+          cost_currency: formData.cost_currency,
           unit: formData.unit
         }
       });
@@ -165,7 +190,9 @@ const Warehouse = () => {
       quantity: product.quantity.toString(),
       sale_price: product.sale_price,
       cost_price: product.cost_price || '',
-      unit: product.unit || 'dona'
+      unit: product.unit || 'dona',
+      cost_currency: product.cost_currency || 'UZS',
+      sale_currency: product.sale_currency || 'UZS',
     });
     setShowEditModal(true);
   };
@@ -176,7 +203,7 @@ const Warehouse = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', quantity: '', sale_price: '', cost_price: '', unit: 'dona' });
+    setFormData({ name: '', category: '', quantity: '', sale_price: '', cost_price: '', unit: 'dona', cost_currency: 'UZS', sale_currency: 'UZS' });
     setSelectedProduct(null);
   };
 
@@ -320,10 +347,18 @@ const Warehouse = () => {
                   </div>
 
                   {/* Prices */}
-                  <div className="text-right shrink-0 mr-1">
-                    <p className="text-sm font-black text-[#1447E6]">{parseFloat(product.sale_price || 0).toLocaleString()}</p>
-                    <p className="text-[10px] text-gray-400">{parseFloat(product.cost_price || 0).toLocaleString()} tan</p>
-                  </div>
+                  {parseFloat(product.sale_price || 0) > 0 && (
+                    <div className="text-right shrink-0 mr-1">
+                      <p className="text-sm font-black text-[#1447E6]">
+                        {parseFloat(product.sale_price).toLocaleString()} {product.sale_currency === 'USD' ? '$' : "so'm"}
+                      </p>
+                      {parseFloat(product.cost_price || 0) > 0 && (
+                        <p className="text-[10px] text-gray-400">
+                          {parseFloat(product.cost_price).toLocaleString()} {product.cost_currency === 'USD' ? '$' : "so'm"} tan
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Quantity */}
                   <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2.5 py-1.5 mr-1">

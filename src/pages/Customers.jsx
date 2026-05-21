@@ -19,9 +19,12 @@ const statusConfig = {
   NOFAOL: { label: 'Nofaol', border: 'border-l-gray-400', badge: 'bg-gray-50 text-gray-500' },
 };
 
+const hasAnyDebt = (c) =>
+  parseFloat(c?.debt_uzs || 0) > 0 || parseFloat(c?.debt_usd || 0) > 0;
+
 const getStatusConfig = (customer) => {
   if (customer.status) return statusConfig[customer.status] || statusConfig.FAOL;
-  if (parseFloat(customer.debt || 0) > 0) return statusConfig.QARZDOR;
+  if (hasAnyDebt(customer)) return statusConfig.QARZDOR;
   if (customer.is_vip) return statusConfig.VIP;
   return statusConfig.FAOL;
 };
@@ -30,7 +33,9 @@ const SWIPE_THRESHOLD = 75;
 
 const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   const sc = getStatusConfig(customer);
-  const hasDebt = parseFloat(customer.debt || 0) > 0;
+  const hasDebt = hasAnyDebt(customer);
+  const debtUZS = parseFloat(customer.debt_uzs || 0);
+  const debtUSD = parseFloat(customer.debt_usd || 0);
   const x = useMotionValue(0);
 
   const editOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
@@ -115,9 +120,18 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
           {/* Debt badge */}
           <div className="text-right shrink-0">
             {hasDebt ? (
-              <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
-                {parseFloat(customer.debt).toLocaleString()} so'm
-              </span>
+              <div className="space-y-0.5">
+                {debtUZS > 0 && (
+                  <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
+                    {debtUZS.toLocaleString()} so'm
+                  </span>
+                )}
+                {debtUSD > 0 && (
+                  <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
+                    {debtUSD.toLocaleString()} $
+                  </span>
+                )}
+              </div>
             ) : (
               <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-xl block">
                 Qarsiz
@@ -177,6 +191,7 @@ const CustomerMessageHistoryView = ({ customerId, onClose }) => {
 const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdit }) => {
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState('');
+  const [payCurrency, setPayCurrency] = useState('UZS');
   const [showHistory, setShowHistory] = useState(false);
   const [showTelegramForm, setShowTelegramForm] = useState(false);
   const [telegramMessage, setTelegramMessage] = useState('');
@@ -196,7 +211,10 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
 
   // Use fresh detail data, fall back to list snapshot while loading
   const detail = customerDetail || customer;
-  const hasDebt = parseFloat(detail.debt || 0) > 0;
+  const debtUZS = parseFloat(detail.debt_uzs || 0);
+  const debtUSD = parseFloat(detail.debt_usd || 0);
+  const hasDebt = debtUZS > 0 || debtUSD > 0;
+  const currentDebtAmount = payCurrency === 'USD' ? debtUSD : debtUZS;
   const isLinked = customerDetail?.is_linked ?? false;
   const botLinkLoading = !customerDetail && detailLoading;
   const deepLink = customerDetail?.link_token
@@ -210,7 +228,7 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
       return;
     }
     try {
-      await payDebtMutation.mutateAsync({ id: customer.id, data: { amount: parseFloat(payAmount) } });
+      await payDebtMutation.mutateAsync({ id: customer.id, data: { amount: parseFloat(payAmount), currency: payCurrency } });
       setShowPayForm(false);
       setPayAmount('');
       onClose();
@@ -302,11 +320,21 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
             <span className="text-xs text-gray-500 block mb-1">Jami xaridlar</span>
-            <span className="font-bold text-gray-900 text-sm">{parseFloat(detail.total_spent || 0).toLocaleString()} so'm</span>
+            {parseFloat(detail.total_spent_uzs || 0) > 0 && (
+              <span className="font-bold text-gray-900 text-sm block">{parseFloat(detail.total_spent_uzs || 0).toLocaleString()} so'm</span>
+            )}
+            {parseFloat(detail.total_spent_usd || 0) > 0 && (
+              <span className="font-bold text-gray-900 text-sm block">{parseFloat(detail.total_spent_usd || 0).toLocaleString()} $</span>
+            )}
+            {parseFloat(detail.total_spent_uzs || 0) === 0 && parseFloat(detail.total_spent_usd || 0) === 0 && (
+              <span className="font-bold text-gray-400 text-sm">0 so'm</span>
+            )}
           </div>
           <div className={`rounded-2xl p-4 shadow-sm border text-center ${hasDebt ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
             <span className={`text-xs block mb-1 ${hasDebt ? 'text-red-500' : 'text-blue-600'}`}>Joriy qarz</span>
-            <span className={`font-bold text-sm ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{parseFloat(detail.debt || 0).toLocaleString()} so'm</span>
+            {debtUZS > 0 && <span className={`font-bold text-sm block ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{debtUZS.toLocaleString()} so'm</span>}
+            {debtUSD > 0 && <span className={`font-bold text-sm block ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{debtUSD.toLocaleString()} $</span>}
+            {!hasDebt && <span className="font-bold text-sm text-blue-600">Qarsiz</span>}
           </div>
         </div>
 
@@ -498,21 +526,33 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
           <div>
             {showPayForm ? (
               <form onSubmit={handlePayDebt} className="bg-red-50 rounded-2xl p-4 space-y-3 border border-red-100">
-                <p className="text-xs font-semibold text-red-600">
-                  Qarz: {parseFloat(detail.debt).toLocaleString()} so'm
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-red-600">
+                    Qarz: {debtUZS > 0 && `${debtUZS.toLocaleString()} so'm`}{debtUZS > 0 && debtUSD > 0 && ' • '}{debtUSD > 0 && `${debtUSD.toLocaleString()} $`}
+                  </p>
+                  {debtUZS > 0 && debtUSD > 0 && (
+                    <div className="flex rounded-xl overflow-hidden border border-red-200">
+                      {['UZS', 'USD'].map(cur => (
+                        <button key={cur} type="button" onClick={() => { setPayCurrency(cur); setPayAmount(''); }}
+                          className={`px-3 py-1 text-xs font-bold transition-colors ${payCurrency === cur ? 'bg-red-500 text-white' : 'bg-white text-red-500'}`}>
+                          {cur}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     value={payAmount}
                     onChange={e => setPayAmount(e.target.value)}
-                    placeholder="Miqdor (so'm)"
-                    max={parseFloat(detail.debt)}
+                    placeholder={`Miqdor (${payCurrency === 'USD' ? '$' : "so'm"})`}
+                    max={currentDebtAmount}
                     className="flex-1 bg-white border border-red-200 rounded-xl py-3 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-300"
                   />
                   <button
                     type="button"
-                    onClick={() => setPayAmount(parseFloat(detail.debt).toString())}
+                    onClick={() => setPayAmount(currentDebtAmount.toString())}
                     className="px-3 bg-red-100 text-red-600 rounded-xl text-xs font-bold whitespace-nowrap border border-red-200 hover:bg-red-200 transition-colors"
                   >
                     To'liq
@@ -576,7 +616,8 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
     name: initialData?.name || '',
     phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',
     address: initialData?.address || '',
-    debt: initialData?.debt || 0,
+    debt_uzs: initialData?.debt_uzs || 0,
+    debt_usd: initialData?.debt_usd || 0,
     status: initialData?.status || 'active',
     note: initialData?.note || '',
   });
@@ -663,16 +704,29 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
               <option value="inactive">Nofaol</option>
             </select>
           </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz miqdori</label>
-            <input
-              name="debt"
-              value={formData.debt}
-              onChange={e => setFormData({ ...formData, debt: e.target.value })}
-              type="number"
-              className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
-              placeholder="0"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
+              <input
+                name="debt_uzs"
+                value={formData.debt_uzs}
+                onChange={e => setFormData({ ...formData, debt_uzs: e.target.value })}
+                type="number"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz ($)</label>
+              <input
+                name="debt_usd"
+                value={formData.debt_usd}
+                onChange={e => setFormData({ ...formData, debt_usd: e.target.value })}
+                type="number"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+                placeholder="0"
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 block mb-1.5">Eslatma (Note)</label>

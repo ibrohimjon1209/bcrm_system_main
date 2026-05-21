@@ -3,7 +3,7 @@ import {
   FiSearch, FiPlus, FiMinus, FiX, FiCheck, FiSend, FiShare2,
   FiArrowLeft, FiPackage, FiLoader, FiShoppingCart, FiUser
 } from 'react-icons/fi';
-import { useProducts } from '../hooks/useProducts';
+import { useProductsForSale } from '../hooks/useProducts';
 import { useCustomers, useCreateCustomer } from '../hooks/useCustomers';
 import { useCreateSale } from '../hooks/useSales';
 import { toast } from 'react-toastify';
@@ -21,12 +21,15 @@ const Sales = () => {
   const [lastCreatedSale, setLastCreatedSale] = useState(null);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
 
-  const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm });
+  const { data: productsData, isLoading: productsLoading } = useProductsForSale();
   const { data: customersData } = useCustomers();
   const createSaleMutation = useCreateSale();
   const createCustomerMutation = useCreateCustomer();
 
-  const products = productsData?.results || [];
+  const allProducts = productsData?.results || productsData || [];
+  const products = searchTerm
+    ? allProducts.filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    : allProducts;
   const customers = customersData?.results || [];
 
   const addToCart = (product) => {
@@ -48,6 +51,7 @@ const Sales = () => {
         id: product.id,
         name: product.name,
         price: parseFloat(product.sale_price || 0),
+        currency: product.sale_currency || 'UZS',
         quantity: 1,
         maxQuantity: product.quantity
       }]);
@@ -70,6 +74,10 @@ const Sales = () => {
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
 
   const getDefaultTotal = () => cart.reduce((total, item) => total + (parseFloat(item.price || 0) * item.quantity), 0);
+
+  // Determine currency from cart (all items assumed same currency)
+  const cartCurrency = cart.find(i => i.currency)?.currency || 'UZS';
+  const cur = cartCurrency === 'USD' ? '$' : "so'm";
 
   // Custom sale price entered by user overrides product prices
   const customSaleAmount = parseFloat(paidAmount) || 0;
@@ -132,7 +140,7 @@ const Sales = () => {
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
               <FiCheck className="w-10 h-10 text-emerald-500" />
             </div>
-            <p className="text-3xl font-black text-gray-900 mb-1">{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} so'm</p>
+            <p className="text-3xl font-black text-gray-900 mb-1">{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} {cur}</p>
             <p className="text-gray-400 text-sm mb-6">Sotuv muvaffaqiyatli yakunlandi</p>
             <div className="space-y-3">
               <button
@@ -193,16 +201,16 @@ const Sales = () => {
           <div className="border-t border-dashed border-gray-200 pt-4 space-y-2 mb-5">
             <div className="flex justify-between font-bold text-gray-900">
               <span>Jami:</span>
-              <span>{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} so'm</span>
+              <span>{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} {cur}</span>
             </div>
             <div className="flex justify-between text-sm text-gray-500">
               <span>To'landi:</span>
-              <span>{parseFloat(lastCreatedSale?.paid_amount || 0).toLocaleString()} so'm</span>
+              <span>{parseFloat(lastCreatedSale?.paid_amount || 0).toLocaleString()} {cur}</span>
             </div>
             {parseFloat(lastCreatedSale?.debt_amount || 0) > 0 && (
               <div className="flex justify-between text-sm font-bold text-red-500">
                 <span>Qarz:</span>
-                <span>{parseFloat(lastCreatedSale?.debt_amount || 0).toLocaleString()} so'm</span>
+                <span>{parseFloat(lastCreatedSale?.debt_amount || 0).toLocaleString()} {cur}</span>
               </div>
             )}
           </div>
@@ -298,7 +306,9 @@ const Sales = () => {
                 </div>
                 <h4 className="font-semibold text-gray-800 text-xs mb-1.5 truncate leading-tight">{product.name}</h4>
                 <div className="flex items-center justify-between">
-                  <p className="text-[#1447E6] font-bold text-sm">{parseFloat(product.sale_price || 0).toLocaleString()}</p>
+                  <p className="text-[#1447E6] font-bold text-sm">
+                    {parseFloat(product.sale_price || 0).toLocaleString()} {product.sale_currency === 'USD' ? '$' : "so'm"}
+                  </p>
                   <div className="w-6 h-6 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center group-hover:bg-[#1447E6] group-hover:text-white transition-colors">
                     <FiPlus className="w-3 h-3" />
                   </div>
@@ -321,7 +331,7 @@ const Sales = () => {
                 <div key={item.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-gray-900 text-xs truncate">{item.name}</h4>
-                    <p className="text-[10px] text-gray-400">{item.price.toLocaleString()} so'm</p>
+                    <p className="text-[10px] text-gray-400">{item.price.toLocaleString()} {item.currency === 'USD' ? '$' : "so'm"}</p>
                   </div>
                   <div className="flex items-center bg-gray-50 rounded-xl p-0.5">
                     <button
@@ -405,7 +415,7 @@ const Sales = () => {
                 </div>
                 {hasCustomAmount && (
                   <p className="text-[10px] text-blue-500 mt-1.5 font-semibold">
-                    Standart narx: {getDefaultTotal().toLocaleString()} so'm → Maxsus: {customSaleAmount.toLocaleString()} so'm
+                    Standart narx: {getDefaultTotal().toLocaleString()} {cur} → Maxsus: {customSaleAmount.toLocaleString()} {cur}
                   </p>
                 )}
               </div>
@@ -415,7 +425,7 @@ const Sales = () => {
               <div className="flex justify-between font-bold text-gray-900">
                 <span className="text-sm">Jami:</span>
                 <span className={`text-base ${hasCustomAmount ? 'text-blue-600' : ''}`}>
-                  {getTotal().toLocaleString()} so'm
+                  {getTotal().toLocaleString()} {cur}
                 </span>
               </div>
             </div>

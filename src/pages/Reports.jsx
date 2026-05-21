@@ -18,7 +18,7 @@ const periodMap = {
   'Yil':    'yillik',
 };
 
-const StatCard = ({ icon: Icon, bg, color, title, value, sub, loading }) => (
+const StatCard = ({ icon: Icon, bg, color, title, value, sub, loading, valueUSD }) => (
   <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
     <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-3`}>
       <Icon className={`w-4 h-4 ${color}`} />
@@ -27,7 +27,12 @@ const StatCard = ({ icon: Icon, bg, color, title, value, sub, loading }) => (
     {loading ? (
       <div className="h-6 w-24 bg-gray-100 rounded animate-pulse" />
     ) : (
-      <p className={`text-base font-black ${color} leading-tight`}>{value}</p>
+      <>
+        <p className={`text-base font-black ${color} leading-tight`}>{value}</p>
+        {valueUSD != null && (
+          <p className="text-sm font-bold text-gray-500">{fmt(valueUSD)} $</p>
+        )}
+      </>
     )}
     {sub && <p className="text-[9px] text-gray-400 font-medium mt-0.5">{sub}</p>}
   </div>
@@ -63,29 +68,35 @@ const Reports = () => {
   const { data: lowStockProducts = [] } = useLowStockProducts();
 
   const debtors = Array.isArray(debtorsRaw) ? debtorsRaw : (debtorsRaw?.results || []);
-  const totalDebt = debtors.reduce((s, c) => s + parseFloat(c.debt || 0), 0);
+  const totalDebt = debtors.reduce((s, c) => s + parseFloat(c.debt_uzs || 0), 0);
 
   const allProducts = allProductsData?.results || [];
   const computedWarehouse = useMemo(() => ({
     total:     allProductsData?.count || allProducts.length,
     quantity:  allProducts.reduce((s, p) => s + parseFloat(p.quantity   || 0), 0),
-    costValue: allProducts.reduce((s, p) => s + parseFloat(p.cost_price || 0) * parseFloat(p.quantity || 0), 0),
-    saleValue: allProducts.reduce((s, p) => s + parseFloat(p.sale_price || 0) * parseFloat(p.quantity || 0), 0),
+    costValue: allProducts.reduce((s, p) => s + parseFloat(p.cost_currency !== 'USD' ? p.cost_price || 0 : 0) * parseFloat(p.quantity || 0), 0),
   }), [allProducts, allProductsData]);
 
   // Prefer dedicated endpoint data, fall back to computed
   const wh = warehouseError ? null : warehouseData;
-  const totalProducts  = wh?.total_products   ?? computedWarehouse.total;
-  const totalQty       = wh?.total_quantity    ?? computedWarehouse.quantity;
-  const totalCostVal   = wh?.total_cost_value  ?? computedWarehouse.costValue;
-  const totalSaleVal   = wh?.total_sale_value  ?? computedWarehouse.saleValue;
-  const lowStockList   = wh?.low_stock_products?.length ? wh.low_stock_products : lowStockProducts;
+  const totalProducts  = wh?.total_products ?? computedWarehouse.total;
+  const totalQty       = wh?.total_quantity ?? computedWarehouse.quantity;
+  const totalValUZS    = parseFloat(wh?.total_value_uzs ?? wh?.total_value ?? computedWarehouse.costValue);
+  const totalValUSD    = parseFloat(wh?.total_value_usd ?? 0);
+  const lowStockList   = wh?.low_stock?.length ? wh.low_stock : (wh?.low_stock_products?.length ? wh.low_stock_products : lowStockProducts);
   const warehouseSpinning = warehouseLoading && productsLoading;
 
   // Dashboard: prefer /reports/dashboard/, fall back to profit+sales+debtors
   const revenue     = dashError ? null : (dashStats?.total_revenue ?? dashStats?.revenue);
   const profit      = dashError ? null : (dashStats?.total_profit  ?? dashStats?.profit);
   const salesCount  = dashStats?.total_sales_count ?? salesData?.count ?? 0;
+
+  const revUZS  = parseFloat(dashStats?.revenue_by_currency?.UZS ?? revenue ?? 0);
+  const revUSD  = parseFloat(dashStats?.revenue_by_currency?.USD ?? 0);
+  const profUZS = parseFloat(dashStats?.profit_by_currency?.UZS  ?? profit  ?? 0);
+  const profUSD = parseFloat(dashStats?.profit_by_currency?.USD  ?? 0);
+  const debtUZS = parseFloat(dashStats?.debt_by_currency?.UZS ?? dashStats?.debt_uzs ?? totalDebt);
+  const debtUSD = parseFloat(dashStats?.debt_by_currency?.USD ?? dashStats?.debt_usd ?? 0);
 
   const tabs = [
     { id: 'dashboard', label: 'Umumiy'  },
@@ -145,14 +156,16 @@ const Reports = () => {
               <StatCard
                 icon={FiDollarSign} bg="bg-blue-50" color="text-[#1447E6]"
                 title="Umumiy Tushum"
-                value={revenue != null ? `${fmt(revenue)} so'm` : '—'}
+                value={revenue != null ? `${fmt(revUZS)} so'm` : '—'}
+                valueUSD={revUSD}
                 sub={dashPeriod}
                 loading={dashLoading}
               />
               <StatCard
                 icon={FiTrendingUp} bg="bg-emerald-50" color="text-emerald-600"
                 title="Sof Foyda"
-                value={profit != null ? `${fmt(profit)} so'm` : '—'}
+                value={profit != null ? `${fmt(profUZS)} so'm` : '—'}
+                valueUSD={profUSD}
                 sub={dashPeriod}
                 loading={dashLoading}
               />
@@ -166,7 +179,8 @@ const Reports = () => {
               <StatCard
                 icon={FiCreditCard} bg="bg-orange-50" color="text-orange-600"
                 title="Umumiy Qarz"
-                value={`${fmt(totalDebt)} so'm`}
+                value={`${fmt(debtUZS)} so'm`}
+                valueUSD={debtUSD}
                 sub={`${debtors.length} ta qarzdor`}
                 loading={false}
               />
@@ -178,17 +192,20 @@ const Reports = () => {
                 <h3 className="text-sm font-bold text-gray-900 mb-4">Tushum vs Xarajat</h3>
                 <div className="space-y-3">
                   {[
-                    { label: 'Tushum', value: revenue ?? dashStats?.total_revenue, color: 'bg-[#1447E6]',   text: 'text-[#1447E6]'   },
-                    { label: 'Foyda',  value: profit  ?? dashStats?.total_profit,  color: 'bg-emerald-500', text: 'text-emerald-600' },
-                    { label: 'Xarid xarajati', value: profitData?.purchase_cost || dashStats?.purchase_cost || 0, color: 'bg-red-500', text: 'text-red-500' },
+                    { label: 'Tushum', uzs: revUZS,  usd: revUSD,  color: 'bg-[#1447E6]',   text: 'text-[#1447E6]'   },
+                    { label: 'Foyda',  uzs: profUZS, usd: profUSD, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                    { label: 'Xarid xarajati', uzs: parseFloat(dashStats?.purchase_total_by_currency?.UZS ?? dashStats?.purchase_total ?? 0), usd: parseFloat(dashStats?.purchase_total_by_currency?.USD ?? 0), color: 'bg-red-500', text: 'text-red-500' },
                   ].map((row, i) => {
-                    const max = parseFloat(revenue ?? dashStats?.total_revenue ?? 1) || 1;
-                    const pct = Math.min(100, (parseFloat(row.value || 0) / max) * 100);
+                    const max = revUZS || 1;
+                    const pct = Math.min(100, (row.uzs / max) * 100);
                     return (
                       <div key={i}>
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs font-semibold text-gray-600">{row.label}</span>
-                          <span className={`text-xs font-black ${row.text}`}>{fmt(row.value)} so'm</span>
+                          <div className="text-right">
+                            <span className={`text-xs font-black ${row.text}`}>{fmt(row.uzs)} so'm</span>
+                            {row.usd > 0 && <span className="text-xs font-bold text-gray-400 ml-2">{fmt(row.usd)} $</span>}
+                          </div>
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-2">
                           <div className={`${row.color} h-2 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
@@ -278,7 +295,10 @@ const Reports = () => {
                         </div>
                         <p className="text-xs font-semibold text-gray-800">{c.name}</p>
                       </div>
-                      <span className="text-xs font-black text-red-500">{fmt(c.debt)} so'm</span>
+                      <div className="text-right">
+                        {parseFloat(c.debt_uzs || 0) > 0 && <span className="text-xs font-black text-red-500 block">{fmt(c.debt_uzs)} so'm</span>}
+                        {parseFloat(c.debt_usd || 0) > 0 && <span className="text-xs font-black text-red-500 block">{fmt(c.debt_usd)} $</span>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -315,16 +335,16 @@ const Reports = () => {
                 {/* Summary cards */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
-                    { label: 'Tushum',         value: profitData.revenue,       bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
-                    { label: 'Sotuv xarajati', value: profitData.sale_cost,     bg: 'bg-orange-50',  color: 'text-orange-600'  },
-                    { label: 'Xarid xarajati', value: profitData.purchase_cost, bg: 'bg-red-50',     color: 'text-red-500'     },
-                    { label: 'Yalpi foyda',    value: profitData.gross_profit,  bg: 'bg-teal-50',    color: 'text-teal-600'    },
-                    { label: 'Sof foyda',      value: profitData.net_profit,    bg: 'bg-emerald-50', color: 'text-emerald-600' },
+                    { label: 'Tushum',         uzs: profitData.revenue_by_currency?.UZS ?? profitData.revenue,       usd: profitData.revenue_by_currency?.USD ?? 0,      bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
+                    { label: 'Sotuv xarajati', uzs: profitData.sale_cost_by_currency?.UZS ?? profitData.sale_cost,   usd: profitData.sale_cost_by_currency?.USD ?? 0,    bg: 'bg-orange-50',  color: 'text-orange-600'  },
+                    { label: 'Xarid xarajati', uzs: profitData.purchase_cost,                                         usd: 0,                                             bg: 'bg-red-50',     color: 'text-red-500'     },
+                    { label: 'Yalpi foyda',    uzs: profitData.gross_profit,                                          usd: 0,                                             bg: 'bg-teal-50',    color: 'text-teal-600'    },
+                    { label: 'Sof foyda',      uzs: profitData.profit_by_currency?.UZS ?? profitData.net_profit,     usd: profitData.profit_by_currency?.USD ?? 0,       bg: 'bg-emerald-50', color: 'text-emerald-600' },
                   ].map((item, i) => (
                     <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                       <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${item.color}`}>{item.label}</p>
-                      <p className={`text-base font-black ${item.color} leading-tight`}>{fmt(item.value)}</p>
-                      <p className="text-[9px] text-gray-400 mt-0.5">so'm</p>
+                      <p className={`text-base font-black ${item.color} leading-tight`}>{fmt(item.uzs)} so'm</p>
+                      {parseFloat(item.usd) > 0 && <p className="text-sm font-bold text-gray-500">{fmt(item.usd)} $</p>}
                     </div>
                   ))}
                 </div>
@@ -365,11 +385,10 @@ const Reports = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <StatCard icon={FiPackage} bg="bg-blue-50"    color="text-[#1447E6]"   title="Jami Mahsulotlar"    value={totalProducts}                     sub="tur"   />
-                  <StatCard icon={FiPackage} bg="bg-purple-50"  color="text-purple-600"  title="Jami Miqdor"        value={fmt(totalQty)}                     sub="dona"  />
-                  <StatCard icon={FiPackage} bg="bg-orange-50"  color="text-orange-600"  title="Tan Narx Qiymati"   value={`${fmt(totalCostVal)} so'm`}       sub=""      />
-                  <StatCard icon={FiPackage} bg="bg-emerald-50" color="text-emerald-600" title="Sotuv Narx Qiymati" value={`${fmt(totalSaleVal)} so'm`}       sub=""      />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <StatCard icon={FiPackage} bg="bg-blue-50"   color="text-[#1447E6]"  title="Jami Mahsulotlar" value={totalProducts}         sub="tur"  />
+                  <StatCard icon={FiPackage} bg="bg-purple-50" color="text-purple-600" title="Jami Miqdor"      value={fmt(totalQty)}         sub="dona" />
+                  <StatCard icon={FiPackage} bg="bg-orange-50" color="text-orange-600" title="Ombor Qiymati"    value={`${fmt(totalValUZS)} so'm`} valueUSD={totalValUSD} sub="" />
                 </div>
 
                 {lowStockList.length > 0 && (
@@ -415,8 +434,8 @@ const Reports = () => {
                             <tr key={i} className="hover:bg-gray-50/50 transition-colors">
                               <td className="py-2.5 px-3 font-semibold text-gray-800">{p.name}</td>
                               <td className="py-2.5 px-3 text-center text-gray-600">{p.quantity} {p.unit}</td>
-                              <td className="py-2.5 px-3 text-right text-gray-500">{fmt(p.cost_price)}</td>
-                              <td className="py-2.5 px-3 text-right font-bold text-[#1447E6]">{fmt(p.sale_price)}</td>
+                              <td className="py-2.5 px-3 text-right text-gray-500">{fmt(p.cost_price)} {p.cost_currency === 'USD' ? '$' : "so'm"}</td>
+                              <td className="py-2.5 px-3 text-right font-bold text-[#1447E6]">{fmt(p.sale_price)} {p.sale_currency === 'USD' ? '$' : "so'm"}</td>
                             </tr>
                           ))}
                         </tbody>
