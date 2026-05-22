@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   FiSearch, FiPlus, FiMinus, FiX, FiCheck, FiSend, FiShare2,
-  FiArrowLeft, FiPackage, FiLoader, FiShoppingCart, FiUser
+  FiArrowLeft, FiPackage, FiLoader, FiShoppingCart, FiUser,
+  FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 import { useProductsForSale } from '../hooks/useProducts';
 import { useCustomers, useCreateCustomer } from '../hooks/useCustomers';
@@ -13,23 +14,29 @@ import { AnimatePresence } from 'framer-motion';
 const Sales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [productPage, setProductPage] = useState(1);
   const [cart, setCart] = useState([]);
   const [paymentType, setPaymentType] = useState('cash');
-  const [paidAmount, setPaidAmount] = useState('');
+  const [customUzs, setCustomUzs] = useState('');
+  const [customUsd, setCustomUsd] = useState('');
   const [showCompletion, setShowCompletion] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCreatedSale, setLastCreatedSale] = useState(null);
+  const [saleAmounts, setSaleAmounts] = useState({ uzs: 0, usd: 0 });
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
 
-  const { data: productsData, isLoading: productsLoading } = useProductsForSale();
+  const { data: productsData, isLoading: productsLoading } = useProductsForSale({
+    page: productPage,
+    ...(searchTerm ? { search: searchTerm } : {}),
+  });
   const { data: customersData } = useCustomers();
   const createSaleMutation = useCreateSale();
   const createCustomerMutation = useCreateCustomer();
 
-  const allProducts = productsData?.results || productsData || [];
-  const products = searchTerm
-    ? allProducts.filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-    : allProducts;
+  useEffect(() => { setProductPage(1); }, [searchTerm]);
+
+  const products = productsData?.results || [];
+  const totalProductPages = productsData?.count ? Math.ceil(productsData.count / 20) : 1;
   const customers = customersData?.results || [];
 
   const addToCart = (product) => {
@@ -47,11 +54,12 @@ const Sales = () => {
         toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
       }
     } else {
+      const isUsd = parseFloat(product.sale_price_usd || 0) > 0;
       setCart([...cart, {
         id: product.id,
         name: product.name,
-        price: parseFloat(product.sale_price || 0),
-        currency: product.sale_currency || 'UZS',
+        price: isUsd ? parseFloat(product.sale_price_usd) : parseFloat(product.sale_price_uzs || product.sale_price || 0),
+        currency: isUsd ? 'USD' : 'UZS',
         quantity: 1,
         maxQuantity: product.quantity
       }]);
@@ -73,16 +81,40 @@ const Sales = () => {
 
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
 
-  const getDefaultTotal = () => cart.reduce((total, item) => total + (parseFloat(item.price || 0) * item.quantity), 0);
+  const setQuantity = (id, value) => {
+    const num = parseInt(value, 10);
+    if (!value || isNaN(num) || num <= 0) {
+      setCart(cart.map(item => item.id === id ? { ...item, quantity: '' } : item));
+      return;
+    }
+    const item = cart.find(i => i.id === id);
+    if (num > item.maxQuantity) {
+      toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
+      setCart(cart.map(i => i.id === id ? { ...i, quantity: i.maxQuantity } : i));
+      return;
+    }
+    setCart(cart.map(i => i.id === id ? { ...i, quantity: num } : i));
+  };
 
-  // Determine currency from cart (all items assumed same currency)
-  const cartCurrency = cart.find(i => i.currency)?.currency || 'UZS';
+  const commitQuantity = (id) => {
+    setCart(prev => prev
+      .map(i => i.id === id ? { ...i, quantity: parseInt(i.quantity, 10) || 1 } : i)
+      .filter(i => i.quantity > 0)
+    );
+  };
+
+  const getTotalUzs = () => cart.filter(i => i.currency === 'UZS').reduce((s, i) => s + i.price * (parseInt(i.quantity, 10) || 0), 0);
+  const getTotalUsd = () => cart.filter(i => i.currency === 'USD').reduce((s, i) => s + i.price * (parseInt(i.quantity, 10) || 0), 0);
+  const getDefaultTotal = () => getTotalUzs() || getTotalUsd();
+
+  // For display in hint and completion screen — dominant currency
+  const cartCurrency = getTotalUzs() > 0 ? 'UZS' : 'USD';
   const cur = cartCurrency === 'USD' ? '$' : "so'm";
 
-  // Custom sale price entered by user overrides product prices
-  const customSaleAmount = parseFloat(paidAmount) || 0;
-  const hasCustomAmount = paidAmount !== '' && customSaleAmount > 0 && paymentType !== 'debt';
-  const getTotal = () => hasCustomAmount ? customSaleAmount : getDefaultTotal();
+  const customUzsAmount = parseFloat(customUzs) || 0;
+  const customUsdAmount = parseFloat(customUsd) || 0;
+  const hasCustomUzs = customUzs !== '' && customUzsAmount > 0 && paymentType !== 'debt';
+  const hasCustomUsd = customUsd !== '' && customUsdAmount > 0 && paymentType !== 'debt';
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) return;
@@ -91,9 +123,10 @@ const Sales = () => {
       return;
     }
 
-    // Scale item prices so their total matches the custom amount
-    const defaultTotal = getDefaultTotal();
-    const scaleFactor = (hasCustomAmount && defaultTotal > 0) ? customSaleAmount / defaultTotal : 1;
+    const defaultUzs = getTotalUzs();
+    const defaultUsd = getTotalUsd();
+    const scaleUzs = (hasCustomUzs && defaultUzs > 0) ? customUzsAmount / defaultUzs : 1;
+    const scaleUsd = (hasCustomUsd && defaultUsd > 0) ? customUsdAmount / defaultUsd : 1;
 
     const payload = {
       customer: selectedCustomer.id,
@@ -101,12 +134,16 @@ const Sales = () => {
       items: cart.map(item => ({
         product: item.id,
         quantity: item.quantity,
-        price: parseFloat((item.price * scaleFactor).toFixed(2))
+        price: parseFloat((item.price * (item.currency === 'USD' ? scaleUsd : scaleUzs)).toFixed(2))
       }))
     };
     try {
       const result = await createSaleMutation.mutateAsync(payload);
       setLastCreatedSale(result);
+      setSaleAmounts({
+        uzs: hasCustomUzs ? customUzsAmount : defaultUzs,
+        usd: hasCustomUsd ? customUsdAmount : defaultUsd,
+      });
       setShowCompletion(true);
     } catch (error) { }
   };
@@ -120,10 +157,12 @@ const Sales = () => {
     setShowCompletion(false);
     setShowReceipt(false);
     setCart([]);
-    setPaidAmount('');
+    setCustomUzs('');
+    setCustomUsd('');
     setPaymentType('cash');
     setSelectedCustomer(null);
     setLastCreatedSale(null);
+    setSaleAmounts({ uzs: 0, usd: 0 });
   };
 
   const formatDateTime = (dateStr) => {
@@ -140,7 +179,14 @@ const Sales = () => {
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
               <FiCheck className="w-10 h-10 text-emerald-500" />
             </div>
-            <p className="text-3xl font-black text-gray-900 mb-1">{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} {cur}</p>
+            <div className="mb-1 space-y-0.5">
+              {saleAmounts.uzs > 0 && (
+                <p className="text-2xl font-black text-[#1447E6]">{saleAmounts.uzs.toLocaleString()} so'm</p>
+              )}
+              {saleAmounts.usd > 0 && (
+                <p className="text-2xl font-black text-emerald-600">${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              )}
+            </div>
             <p className="text-gray-400 text-sm mb-6">Sotuv muvaffaqiyatli yakunlandi</p>
             <div className="space-y-3">
               <button
@@ -188,24 +234,51 @@ const Sales = () => {
               <div className="text-center">Narx</div>
               <div className="text-right">Jami</div>
             </div>
-            {lastCreatedSale?.items?.map((item) => (
-              <div key={item.id} className="grid grid-cols-4 gap-2 text-sm py-1.5">
-                <div className="font-medium text-gray-900 text-xs truncate">{item.product_name}</div>
-                <div className="text-center text-gray-500 text-xs">{item.quantity}</div>
-                <div className="text-center text-gray-500 text-xs">{parseFloat(item.price || 0).toLocaleString()}</div>
-                <div className="text-right font-bold text-gray-900 text-xs">{(parseFloat(item.price || 0) * item.quantity).toLocaleString()}</div>
-              </div>
-            ))}
+            {(() => {
+              const currencyMap = Object.fromEntries(cart.map(i => [i.id, i.currency]));
+              return lastCreatedSale?.items?.map((item) => {
+                const currency = currencyMap[item.product] || 'UZS';
+                const isUsd = currency === 'USD';
+                const symbol = isUsd ? '$' : "so'm";
+                const price = parseFloat(item.price || 0);
+                return (
+                  <div key={item.id} className="grid grid-cols-4 gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                    <div className="font-medium text-gray-900 text-xs truncate">{item.product_name}</div>
+                    <div className="text-center text-gray-500 text-xs">{item.quantity}</div>
+                    <div className={`text-center text-xs font-semibold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                      {isUsd ? `$${price.toLocaleString()}` : `${price.toLocaleString()} so'm`}
+                    </div>
+                    <div className={`text-right font-bold text-xs ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                      {isUsd ? `$${(price * item.quantity).toLocaleString()}` : `${(price * item.quantity).toLocaleString()} so'm`}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
 
           <div className="border-t border-dashed border-gray-200 pt-4 space-y-2 mb-5">
             <div className="flex justify-between font-bold text-gray-900">
               <span>Jami:</span>
-              <span>{parseFloat(lastCreatedSale?.total || 0).toLocaleString()} {cur}</span>
+              <div className="text-right space-y-0.5">
+                {saleAmounts.uzs > 0 && (
+                  <p className="text-[#1447E6]">{saleAmounts.uzs.toLocaleString()} so'm</p>
+                )}
+                {saleAmounts.usd > 0 && (
+                  <p className="text-emerald-600">${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                )}
+              </div>
             </div>
             <div className="flex justify-between text-sm text-gray-500">
               <span>To'landi:</span>
-              <span>{parseFloat(lastCreatedSale?.paid_amount || 0).toLocaleString()} {cur}</span>
+              <div className="text-right space-y-0.5">
+                {saleAmounts.uzs > 0 && (
+                  <p>{saleAmounts.uzs.toLocaleString()} so'm</p>
+                )}
+                {saleAmounts.usd > 0 && (
+                  <p>${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                )}
+              </div>
             </div>
             {parseFloat(lastCreatedSale?.debt_amount || 0) > 0 && (
               <div className="flex justify-between text-sm font-bold text-red-500">
@@ -286,6 +359,8 @@ const Sales = () => {
               <div className="col-span-full py-10 flex justify-center">
                 <FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" />
               </div>
+            ) : products.length === 0 ? (
+              <div className="col-span-full py-8 text-center text-sm text-gray-400">Mahsulot topilmadi</div>
             ) : products.map((product) => (
               <div
                 key={product.id}
@@ -306,9 +381,15 @@ const Sales = () => {
                 </div>
                 <h4 className="font-semibold text-gray-800 text-xs mb-1.5 truncate leading-tight">{product.name}</h4>
                 <div className="flex items-center justify-between">
-                  <p className="text-[#1447E6] font-bold text-sm">
-                    {parseFloat(product.sale_price || 0).toLocaleString()} {product.sale_currency === 'USD' ? '$' : "so'm"}
-                  </p>
+                  {parseFloat(product.sale_price_usd || 0) > 0 ? (
+                    <p className="text-emerald-600 font-bold text-sm leading-tight">
+                      ${parseFloat(product.sale_price_usd).toLocaleString()}
+                    </p>
+                  ) : (
+                    <p className="text-[#1447E6] font-bold text-xs leading-tight">
+                      {parseFloat(product.sale_price_uzs || product.sale_price || 0).toLocaleString()} so'm
+                    </p>
+                  )}
                   <div className="w-6 h-6 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center group-hover:bg-[#1447E6] group-hover:text-white transition-colors">
                     <FiPlus className="w-3 h-3" />
                   </div>
@@ -316,6 +397,30 @@ const Sales = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalProductPages > 1 && (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+              <button
+                onClick={() => setProductPage(p => p - 1)}
+                disabled={productPage === 1 || productsLoading}
+                className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
+              >
+                <FiChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-bold text-gray-500">
+                {productPage} / {totalProductPages}
+                <span className="font-normal text-gray-400 ml-1">({productsData?.count} ta)</span>
+              </span>
+              <button
+                onClick={() => setProductPage(p => p + 1)}
+                disabled={productPage === totalProductPages || productsLoading}
+                className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
+              >
+                <FiChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Cart */}
@@ -340,7 +445,15 @@ const Sales = () => {
                     >
                       <FiMinus className="w-3 h-3" />
                     </button>
-                    <span className="w-7 text-center font-bold text-gray-900 text-xs">{item.quantity}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={item.maxQuantity}
+                      value={item.quantity}
+                      onChange={(e) => setQuantity(item.id, e.target.value)}
+                      onBlur={() => commitQuantity(item.id)}
+                      className="w-10 text-center font-bold text-gray-900 text-xs bg-transparent outline-none"
+                    />
                     <button
                       onClick={() => updateQuantity(item.id, 1)}
                       className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-[#1447E6]"
@@ -377,8 +490,7 @@ const Sales = () => {
                   key={type.id}
                   onClick={() => {
                     setPaymentType(type.id);
-                    if (type.id === 'debt') setPaidAmount('0');
-                    else setPaidAmount('');
+                    if (type.id === 'debt') { setCustomUzs(''); setCustomUsd(''); }
                   }}
                   className={`py-2.5 rounded-xl font-bold text-xs transition-all ${paymentType === type.id
                     ? 'bg-[#1447E6] text-white shadow-sm'
@@ -391,42 +503,84 @@ const Sales = () => {
             </div>
 
             {paymentType !== 'debt' && (
-              <div className="mb-4">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  Sotuv narxi (mahsulot narxini o'zgartirish uchun)
+              <div className="mb-4 space-y-2">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Sotuv narxi (o'zgartirish uchun)
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Maxsus narx kiriting..."
-                    value={paidAmount}
-                    onChange={(e) => setPaidAmount(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
-                  />
-                  {paidAmount !== '' && (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">so'm</span>
+                    <input
+                      type="number"
+                      placeholder={getTotalUzs() > 0 ? getTotalUzs().toLocaleString() : '0'}
+                      value={customUzs}
+                      onChange={(e) => setCustomUzs(e.target.value)}
+                      className="w-full pl-10 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
+                    />
+                    {getTotalUzs() > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomUzs(getTotalUzs().toString())}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1447E6]/10 text-[#1447E6] rounded-lg text-[10px] font-bold hover:bg-[#1447E6]/20 transition-colors"
+                      >
+                        to'liq
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">$</span>
+                    <input
+                      type="number"
+                      placeholder={getTotalUsd() > 0 ? getTotalUsd().toLocaleString() : '0'}
+                      value={customUsd}
+                      onChange={(e) => setCustomUsd(e.target.value)}
+                      className="w-full pl-7 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 font-bold text-sm outline-none"
+                    />
+                    {getTotalUsd() > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomUsd(getTotalUsd().toString())}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-colors"
+                      >
+                        to'liq
+                      </button>
+                    )}
+                  </div>
+                  {(customUzs !== '' || customUsd !== '') && (
                     <button
                       type="button"
-                      onClick={() => setPaidAmount('')}
-                      className="px-3 py-3 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold whitespace-nowrap hover:bg-gray-200 transition-colors"
+                      onClick={() => { setCustomUzs(''); setCustomUsd(''); }}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
                     >
-                      Tozalash
+                      <FiX className="w-3.5 h-3.5" /> Tozalash
                     </button>
                   )}
                 </div>
-                {hasCustomAmount && (
-                  <p className="text-[10px] text-blue-500 mt-1.5 font-semibold">
-                    Standart narx: {getDefaultTotal().toLocaleString()} {cur} → Maxsus: {customSaleAmount.toLocaleString()} {cur}
+                {(hasCustomUzs || hasCustomUsd) && (
+                  <p className="text-[10px] text-blue-500 font-semibold">
+                    {hasCustomUzs && `so'm: ${getTotalUzs().toLocaleString()} → ${customUzsAmount.toLocaleString()}`}
+                    {hasCustomUzs && hasCustomUsd && '  •  '}
+                    {hasCustomUsd && `$: ${getTotalUsd().toLocaleString()} → ${customUsdAmount.toLocaleString()}`}
                   </p>
                 )}
               </div>
             )}
 
-            <div className="pt-3 border-t border-gray-100 space-y-2 mb-4">
+            <div className="pt-3 border-t border-gray-100 space-y-1 mb-4">
               <div className="flex justify-between font-bold text-gray-900">
                 <span className="text-sm">Jami:</span>
-                <span className={`text-base ${hasCustomAmount ? 'text-blue-600' : ''}`}>
-                  {getTotal().toLocaleString()} {cur}
-                </span>
+                <div className="text-right space-y-0.5">
+                  {getTotalUzs() > 0 && (
+                    <p className={`text-base ${hasCustomUzs ? 'text-blue-600' : ''}`}>
+                      {hasCustomUzs ? customUzsAmount.toLocaleString() : getTotalUzs().toLocaleString()} so'm
+                    </p>
+                  )}
+                  {getTotalUsd() > 0 && (
+                    <p className={`text-base ${hasCustomUsd ? 'text-blue-600' : 'text-emerald-600'}`}>
+                      ${hasCustomUsd ? customUsdAmount.toLocaleString() : getTotalUsd().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

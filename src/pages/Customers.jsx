@@ -23,10 +23,9 @@ const hasAnyDebt = (c) =>
   parseFloat(c?.debt_uzs || 0) > 0 || parseFloat(c?.debt_usd || 0) > 0;
 
 const getStatusConfig = (customer) => {
-  if (customer.status) return statusConfig[customer.status] || statusConfig.FAOL;
   if (hasAnyDebt(customer)) return statusConfig.QARZDOR;
-  if (customer.is_vip) return statusConfig.VIP;
-  return statusConfig.FAOL;
+  const s = customer.status?.toUpperCase();
+  return statusConfig[s] || statusConfig.FAOL;
 };
 
 const SWIPE_THRESHOLD = 75;
@@ -579,7 +578,10 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setShowPayForm(true)}
+                  onClick={() => {
+                    setPayCurrency(debtUZS > 0 ? 'UZS' : 'USD');
+                    setShowPayForm(true);
+                  }}
                   className="bg-emerald-600 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm"
                 >
                   <FiCreditCard className="w-4 h-4" /> Qarz To'lash

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiPackage,
-  FiCheck, FiLoader, FiAlertCircle
+  FiCheck, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 import {
   useProducts, useProduct, useCreateProduct, useUpdateProduct, useDeleteProduct,
-  useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory
+  useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
+  useLowStockProducts
 } from '../hooks/useProducts';
 
 const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
@@ -82,6 +83,7 @@ const statusConfig = {
 
 const Warehouse = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -104,8 +106,12 @@ const Warehouse = () => {
     sale_currency: 'UZS',
   });
 
-  const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm });
+  useEffect(() => { setPage(1); }, [searchTerm]);
+
+  const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm, page });
+  const { data: allProductsData } = useProducts({ limit: 1000 });
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
+  const { data: lowStockData } = useLowStockProducts();
   const { data: singleProduct, isLoading: productLoading } = useProduct(selectedProduct?.id);
 
   useEffect(() => {
@@ -132,8 +138,15 @@ const Warehouse = () => {
 
   const products = productsData?.results || [];
   const categories = categoriesData?.results || [];
+  const totalProductPages = productsData?.count ? Math.ceil(productsData.count / 20) : 1;
 
-  const lowStockCount = products.filter(p => p.status === 'low' || p.status === 'critical').length;
+  const totalProductCount = productsData?.count ?? products.length;
+  const lowStockRaw = lowStockData?.results || lowStockData || [];
+  const lowStockCount = Array.isArray(lowStockRaw) ? lowStockRaw.length : 0;
+
+  const allProducts = allProductsData?.results || [];
+  const totalUzs = allProducts.reduce((sum, p) => sum + parseFloat(p.sale_price_uzs || 0) * (p.quantity || 0), 0);
+  const totalUsd = allProducts.reduce((sum, p) => sum + parseFloat(p.sale_price_usd || 0) * (p.quantity || 0), 0);
 
   const getStatusCfg = (status) => statusConfig[status] || statusConfig.good;
 
@@ -277,7 +290,13 @@ const Warehouse = () => {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-blue-50 rounded-2xl p-3 border border-blue-100">
               <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Jami mahsulotlar</p>
-              <p className="text-xl font-black text-blue-700">{products.length}</p>
+              <p className="text-xl font-black text-blue-700">{totalProductCount}</p>
+              {totalUzs > 0 && (
+                <p className="text-xs font-bold text-[#1447E6] mt-0.5">{totalUzs.toLocaleString()} so'm</p>
+              )}
+              {totalUsd > 0 && (
+                <p className="text-xs font-bold text-emerald-600 mt-0.5">${totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              )}
             </div>
             <div className={`rounded-2xl p-3 border ${lowStockCount > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${lowStockCount > 0 ? 'text-red-500' : 'text-emerald-500'}`}>Kam qolgan</p>
@@ -330,60 +349,79 @@ const Warehouse = () => {
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3.5 flex items-center gap-3"
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3.5 flex flex-col gap-2.5"
                 >
-                  {/* Status dot */}
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${sc.dot}`} />
-
-                  {/* Name + meta */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-gray-900 truncate">{product.name}</h3>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      {product.category_name && (
-                        <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">{product.category_name}</span>
-                      )}
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${sc.bg} ${sc.text}`}>{sc.label}</span>
+                  {/* Top row: status dot + name + actions */}
+                  <div className="flex items-start gap-2.5">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${sc.dot}`} />
+                    <h3 className="text-sm font-bold text-gray-900 flex-1 leading-snug">{product.name}</h3>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        onClick={() => openEditModal(product)}
+                        className="w-8 h-8 bg-blue-50 text-[#1447E6] rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
+                      >
+                        <FiEdit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => openDeleteModal(product)}
+                        className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Prices */}
-                  {parseFloat(product.sale_price || 0) > 0 && (
-                    <div className="text-right shrink-0 mr-1">
-                      <p className="text-sm font-black text-[#1447E6]">
-                        {parseFloat(product.sale_price).toLocaleString()} {product.sale_currency === 'USD' ? '$' : "so'm"}
-                      </p>
-                      {parseFloat(product.cost_price || 0) > 0 && (
-                        <p className="text-[10px] text-gray-400">
-                          {parseFloat(product.cost_price).toLocaleString()} {product.cost_currency === 'USD' ? '$' : "so'm"} tan
+                  {/* Bottom row: badges + price + quantity */}
+                  <div className="flex items-center gap-2 flex-wrap pl-5">
+                    {product.category_name && (
+                      <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">{product.category_name}</span>
+                    )}
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${sc.bg} ${sc.text}`}>{sc.label}</span>
+
+                    <div className="ml-auto flex items-center gap-2">
+                      {parseFloat(product.sale_price_uzs || 0) > 0 && (
+                        <p className="text-sm font-black text-[#1447E6] leading-tight">
+                          {parseFloat(product.sale_price_uzs).toLocaleString()} so'm
                         </p>
                       )}
+                      {parseFloat(product.sale_price_usd || 0) > 0 && (
+                        <p className="text-sm font-black text-emerald-600 leading-tight">
+                          ${parseFloat(product.sale_price_usd).toLocaleString()}
+                        </p>
+                      )}
+                      <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2.5 py-1">
+                        <p className="text-sm font-black text-gray-900 leading-tight">{product.quantity}</p>
+                        <p className="text-[9px] text-gray-400">{product.unit || 'dona'}</p>
+                      </div>
                     </div>
-                  )}
-
-                  {/* Quantity */}
-                  <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2.5 py-1.5 mr-1">
-                    <p className="text-sm font-black text-gray-900 leading-tight">{product.quantity}</p>
-                    <p className="text-[9px] text-gray-400">{product.unit || 'dona'}</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-1.5 shrink-0">
-                    <button
-                      onClick={() => openEditModal(product)}
-                      className="w-8 h-8 bg-blue-50 text-[#1447E6] rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
-                    >
-                      <FiEdit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => openDeleteModal(product)}
-                      className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalProductPages > 1 && (
+          <div className="flex items-center justify-between mt-4 bg-white rounded-2xl px-4 py-3 border border-gray-100 shadow-sm">
+            <button
+              onClick={() => setPage(p => p - 1)}
+              disabled={page === 1 || productsLoading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
+            >
+              <FiChevronLeft className="w-4 h-4" /> Oldingi
+            </button>
+            <span className="text-sm font-bold text-gray-600">
+              {page} / {totalProductPages}
+              <span className="font-normal text-gray-400 ml-1.5">({productsData?.count} ta mahsulot)</span>
+            </span>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={page === totalProductPages || productsLoading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
+            >
+              Keyingi <FiChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>

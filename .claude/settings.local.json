@@ -6,7 +6,8 @@
       "Bash(Remove-Item \"D:\\\\Visual Studios\\\\FullStack\\\\balon_market_crm\\\\src\\\\services\\\\reports.service.js\" -Force)",
       "Bash(Remove-Item \"D:\\\\Visual Studios\\\\FullStack\\\\balon_market_crm\\\\src\\\\services\\\\warehouse.service.js\" -Force)",
       "Bash(Write-Host \"Deleted duplicate service files\")",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(node scripts/update-prices.js eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NTA4NDkzLCJpYXQiOjE3Nzk0MjIwOTMsImp0aSI6ImEyZGZjZjllYTk3NzQxOTFhNjA0YjMyZWFlMmE1MTgwIiwidXNlcl9pZCI6Mn0.pCBXhFhu6dXU_wR6txbJzmDbwymn1f4vxewWqP-_TG4)"
     ]
   }
 }
