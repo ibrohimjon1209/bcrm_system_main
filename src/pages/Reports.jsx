@@ -194,7 +194,6 @@ const Reports = () => {
                   {[
                     { label: 'Tushum', uzs: revUZS,  usd: revUSD,  color: 'bg-[#1447E6]',   text: 'text-[#1447E6]'   },
                     { label: 'Foyda',  uzs: profUZS, usd: profUSD, color: 'bg-emerald-500', text: 'text-emerald-600' },
-                    { label: 'Xarid xarajati', uzs: parseFloat(dashStats?.purchase_total_by_currency?.UZS ?? dashStats?.purchase_total ?? 0), usd: parseFloat(dashStats?.purchase_total_by_currency?.USD ?? 0), color: 'bg-red-500', text: 'text-red-500' },
                   ].map((row, i) => {
                     const max = revUZS || 1;
                     const pct = Math.min(100, (row.uzs / max) * 100);
@@ -337,7 +336,6 @@ const Reports = () => {
                   {[
                     { label: 'Tushum',         uzs: profitData.revenue_by_currency?.UZS ?? profitData.revenue,       usd: profitData.revenue_by_currency?.USD ?? 0,      bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
                     { label: 'Sotuv xarajati', uzs: profitData.sale_cost_by_currency?.UZS ?? profitData.sale_cost,   usd: profitData.sale_cost_by_currency?.USD ?? 0,    bg: 'bg-orange-50',  color: 'text-orange-600'  },
-                    { label: 'Xarid xarajati', uzs: profitData.purchase_cost,                                         usd: 0,                                             bg: 'bg-red-50',     color: 'text-red-500'     },
                     { label: 'Yalpi foyda',    uzs: profitData.gross_profit,                                          usd: 0,                                             bg: 'bg-teal-50',    color: 'text-teal-600'    },
                     { label: 'Sof foyda',      uzs: profitData.profit_by_currency?.UZS ?? profitData.net_profit,     usd: profitData.profit_by_currency?.USD ?? 0,       bg: 'bg-emerald-50', color: 'text-emerald-600' },
                   ].map((item, i) => (

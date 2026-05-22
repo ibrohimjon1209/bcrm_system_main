@@ -19,11 +19,23 @@ const Sales = () => {
   const [paymentType, setPaymentType] = useState('cash');
   const [customUzs, setCustomUzs] = useState('');
   const [customUsd, setCustomUsd] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('UZS');
+  const [customAmount, setCustomAmount] = useState('');
   const [showCompletion, setShowCompletion] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCreatedSale, setLastCreatedSale] = useState(null);
   const [saleAmounts, setSaleAmounts] = useState({ uzs: 0, usd: 0 });
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [usdRate, setUsdRate] = useState(12800);
+  const [rateLoading, setRateLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then(r => r.json())
+      .then(data => { if (data.rates?.UZS) setUsdRate(Math.round(data.rates.UZS)); })
+      .catch(() => {})
+      .finally(() => setRateLoading(false));
+  }, []);
 
   const { data: productsData, isLoading: productsLoading } = useProductsForSale({
     page: productPage,
@@ -46,20 +58,25 @@ const Sales = () => {
     }
     const existingItem = cart.find(item => item.id === product.id);
     if (existingItem) {
-      if (existingItem.quantity < product.quantity) {
+      const currentQty = parseInt(existingItem.quantity, 10) || 0;
+      if (currentQty < product.quantity) {
         setCart(cart.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id ? { ...item, quantity: currentQty + 1 } : item
         ));
       } else {
         toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
       }
     } else {
-      const isUsd = parseFloat(product.sale_price_usd || 0) > 0;
+      const priceUzs = parseFloat(product.sale_price_uzs || product.sale_price || 0);
+      const priceUsd = parseFloat(product.sale_price_usd || 0);
+      const hasUzs = priceUzs > 0;
       setCart([...cart, {
         id: product.id,
         name: product.name,
-        price: isUsd ? parseFloat(product.sale_price_usd) : parseFloat(product.sale_price_uzs || product.sale_price || 0),
-        currency: isUsd ? 'USD' : 'UZS',
+        price: hasUzs ? priceUzs : priceUsd,
+        price_uzs: priceUzs,
+        price_usd: priceUsd,
+        currency: hasUzs ? 'UZS' : 'USD',
         quantity: 1,
         maxQuantity: product.quantity
       }]);
@@ -103,8 +120,8 @@ const Sales = () => {
     );
   };
 
-  const getTotalUzs = () => cart.filter(i => i.currency === 'UZS').reduce((s, i) => s + i.price * (parseInt(i.quantity, 10) || 0), 0);
-  const getTotalUsd = () => cart.filter(i => i.currency === 'USD').reduce((s, i) => s + i.price * (parseInt(i.quantity, 10) || 0), 0);
+  const getTotalUzs = () => cart.reduce((s, i) => s + (i.price_uzs || 0) * (parseInt(i.quantity, 10) || 0), 0);
+  const getTotalUsd = () => cart.reduce((s, i) => s + (i.price_usd || 0) * (parseInt(i.quantity, 10) || 0), 0);
   const getDefaultTotal = () => getTotalUzs() || getTotalUsd();
 
   // For display in hint and completion screen — dominant currency
@@ -113,8 +130,10 @@ const Sales = () => {
 
   const customUzsAmount = parseFloat(customUzs) || 0;
   const customUsdAmount = parseFloat(customUsd) || 0;
+  const customAmountValue = parseFloat(customAmount) || 0;
   const hasCustomUzs = customUzs !== '' && customUzsAmount > 0 && paymentType !== 'debt';
   const hasCustomUsd = customUsd !== '' && customUsdAmount > 0 && paymentType !== 'debt';
+  const hasCustomAmount = customAmount !== '' && customAmountValue > 0 && paymentType !== 'debt';
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) return;
@@ -125,24 +144,35 @@ const Sales = () => {
 
     const defaultUzs = getTotalUzs();
     const defaultUsd = getTotalUsd();
-    const scaleUzs = (hasCustomUzs && defaultUzs > 0) ? customUzsAmount / defaultUzs : 1;
-    const scaleUsd = (hasCustomUsd && defaultUsd > 0) ? customUsdAmount / defaultUsd : 1;
+    
+    let scale = 1;
+    if (hasCustomAmount) {
+      if (selectedCurrency === 'UZS' && defaultUzs > 0) {
+        scale = customAmountValue / defaultUzs;
+      } else if (selectedCurrency === 'USD' && defaultUsd > 0) {
+        scale = customAmountValue / defaultUsd;
+      }
+    }
 
     const payload = {
       customer: selectedCustomer.id,
       payment_method: paymentType,
-      items: cart.map(item => ({
-        product: item.id,
-        quantity: item.quantity,
-        price: parseFloat((item.price * (item.currency === 'USD' ? scaleUsd : scaleUzs)).toFixed(2))
-      }))
+      currency: selectedCurrency,
+      items: cart.map(item => {
+        const basePrice = selectedCurrency === 'USD' ? (item.price_usd || 0) : (item.price_uzs || 0);
+        return {
+          product: item.id,
+          quantity: item.quantity,
+          price: parseFloat((basePrice * scale).toFixed(2))
+        };
+      })
     };
     try {
       const result = await createSaleMutation.mutateAsync(payload);
       setLastCreatedSale(result);
       setSaleAmounts({
-        uzs: hasCustomUzs ? customUzsAmount : defaultUzs,
-        usd: hasCustomUsd ? customUsdAmount : defaultUsd,
+        uzs: selectedCurrency === 'UZS' ? (hasCustomAmount ? customAmountValue : defaultUzs) : 0,
+        usd: selectedCurrency === 'USD' ? (hasCustomAmount ? customAmountValue : defaultUsd) : 0,
       });
       setShowCompletion(true);
     } catch (error) { }
@@ -159,10 +189,14 @@ const Sales = () => {
     setCart([]);
     setCustomUzs('');
     setCustomUsd('');
+    setSelectedCurrency('UZS');
+    setCustomAmount('');
     setPaymentType('cash');
     setSelectedCustomer(null);
     setLastCreatedSale(null);
     setSaleAmounts({ uzs: 0, usd: 0 });
+    setSearchTerm('');
+    setProductPage(1);
   };
 
   const formatDateTime = (dateStr) => {
@@ -214,7 +248,7 @@ const Sales = () => {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto shadow-2xl">
           <div className="flex items-center justify-between mb-5">
-            <button onClick={() => setShowReceipt(false)} className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
+            <button onClick={handleNewSale} className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
               <FiArrowLeft className="w-4 h-4" />
             </button>
             <h2 className="text-lg font-bold text-gray-900">Chek #{lastCreatedSale?.id}</h2>
@@ -235,21 +269,18 @@ const Sales = () => {
               <div className="text-right">Jami</div>
             </div>
             {(() => {
-              const currencyMap = Object.fromEntries(cart.map(i => [i.id, i.currency]));
+              const isUsd = saleAmounts.usd > 0;
               return lastCreatedSale?.items?.map((item) => {
-                const currency = currencyMap[item.product] || 'UZS';
-                const isUsd = currency === 'USD';
-                const symbol = isUsd ? '$' : "so'm";
                 const price = parseFloat(item.price || 0);
                 return (
                   <div key={item.id} className="grid grid-cols-4 gap-2 py-1.5 border-b border-gray-50 last:border-0">
                     <div className="font-medium text-gray-900 text-xs truncate">{item.product_name}</div>
                     <div className="text-center text-gray-500 text-xs">{item.quantity}</div>
                     <div className={`text-center text-xs font-semibold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
-                      {isUsd ? `$${price.toLocaleString()}` : `${price.toLocaleString()} so'm`}
+                      {isUsd ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${price.toLocaleString()} so'm`}
                     </div>
                     <div className={`text-right font-bold text-xs ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
-                      {isUsd ? `$${(price * item.quantity).toLocaleString()}` : `${(price * item.quantity).toLocaleString()} so'm`}
+                      {isUsd ? `$${(price * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${(price * item.quantity).toLocaleString()} so'm`}
                     </div>
                   </div>
                 );
@@ -361,41 +392,50 @@ const Sales = () => {
               </div>
             ) : products.length === 0 ? (
               <div className="col-span-full py-8 text-center text-sm text-gray-400">Mahsulot topilmadi</div>
-            ) : products.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => addToCart(product)}
-                className={`group cursor-pointer bg-white rounded-2xl p-3 border transition-all duration-200 ${product.quantity <= 0
-                  ? 'opacity-50 grayscale border-gray-100'
-                  : 'border-gray-100 hover:border-[#1447E6] hover:shadow-md active:scale-95'
-                  }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <FiPackage className="w-4 h-4 text-[#1447E6]" />
+            ) : products.map((product) => {
+              const priceUzs = parseFloat(product.sale_price_uzs || product.sale_price || 0);
+              const priceUsd = parseFloat(product.sale_price_usd || 0);
+              const isHighPrice = priceUzs > 1000000 || priceUsd > 100;
+              
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className={`${isHighPrice ? 'col-span-2' : ''} group cursor-pointer bg-white rounded-2xl p-3 border transition-all duration-200 ${product.quantity <= 0
+                    ? 'opacity-50 grayscale border-gray-100'
+                    : 'border-gray-100 hover:border-[#1447E6] hover:shadow-md active:scale-95'
+                    }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
+                      <FiPackage className="w-4 h-4 text-[#1447E6]" />
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${product.quantity <= 0 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
+                      }`}>
+                      {product.quantity <= 0 ? 'Yo\'q' : `${product.quantity} ${product.unit}`}
+                    </span>
                   </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${product.quantity <= 0 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
-                    }`}>
-                    {product.quantity <= 0 ? 'Yo\'q' : `${product.quantity} ${product.unit}`}
-                  </span>
-                </div>
-                <h4 className="font-semibold text-gray-800 text-xs mb-1.5 truncate leading-tight">{product.name}</h4>
-                <div className="flex items-center justify-between">
-                  {parseFloat(product.sale_price_usd || 0) > 0 ? (
-                    <p className="text-emerald-600 font-bold text-sm leading-tight">
-                      ${parseFloat(product.sale_price_usd).toLocaleString()}
-                    </p>
-                  ) : (
-                    <p className="text-[#1447E6] font-bold text-xs leading-tight">
-                      {parseFloat(product.sale_price_uzs || product.sale_price || 0).toLocaleString()} so'm
-                    </p>
-                  )}
-                  <div className="w-6 h-6 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center group-hover:bg-[#1447E6] group-hover:text-white transition-colors">
-                    <FiPlus className="w-3 h-3" />
+                  <h4 className="font-semibold text-gray-800 text-xs mb-1.5 truncate leading-tight">{product.name}</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-0.5">
+                      {priceUzs > 0 && (
+                        <p className="text-[#1447E6] font-bold text-xs leading-tight">
+                          {priceUzs.toLocaleString()} so'm
+                        </p>
+                      )}
+                      {priceUsd > 0 && (
+                        <p className="text-emerald-600 font-bold text-xs leading-tight">
+                          ${priceUsd.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-6 h-6 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center group-hover:bg-[#1447E6] group-hover:text-white transition-colors">
+                      <FiPlus className="w-3 h-3" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}
@@ -490,7 +530,7 @@ const Sales = () => {
                   key={type.id}
                   onClick={() => {
                     setPaymentType(type.id);
-                    if (type.id === 'debt') { setCustomUzs(''); setCustomUsd(''); }
+                    if (type.id === 'debt') { setCustomUzs(''); setCustomUsd(''); setCustomAmount(''); }
                   }}
                   className={`py-2.5 rounded-xl font-bold text-xs transition-all ${paymentType === type.id
                     ? 'bg-[#1447E6] text-white shadow-sm'
@@ -505,63 +545,60 @@ const Sales = () => {
             {paymentType !== 'debt' && (
               <div className="mb-4 space-y-2">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Sotuv narxi (o'zgartirish uchun)
+                  Sotuv narxi
                 </label>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">so'm</span>
-                    <input
-                      type="number"
-                      placeholder={getTotalUzs() > 0 ? getTotalUzs().toLocaleString() : '0'}
-                      value={customUzs}
-                      onChange={(e) => setCustomUzs(e.target.value)}
-                      className="w-full pl-10 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
-                    />
-                    {getTotalUzs() > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setCustomUzs(getTotalUzs().toString())}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1447E6]/10 text-[#1447E6] rounded-lg text-[10px] font-bold hover:bg-[#1447E6]/20 transition-colors"
-                      >
-                        to'liq
-                      </button>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">$</span>
-                    <input
-                      type="number"
-                      placeholder={getTotalUsd() > 0 ? getTotalUsd().toLocaleString() : '0'}
-                      value={customUsd}
-                      onChange={(e) => setCustomUsd(e.target.value)}
-                      className="w-full pl-7 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 font-bold text-sm outline-none"
-                    />
-                    {getTotalUsd() > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setCustomUsd(getTotalUsd().toString())}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-colors"
-                      >
-                        to'liq
-                      </button>
-                    )}
-                  </div>
-                  {(customUzs !== '' || customUsd !== '') && (
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    onClick={() => { setSelectedCurrency('UZS'); setCustomAmount(''); }}
+                    className={`py-2.5 rounded-xl font-bold text-xs transition-all ${selectedCurrency === 'UZS'
+                      ? 'bg-[#1447E6] text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                  >
+                    so'm
+                  </button>
+                  <button
+                    onClick={() => { setSelectedCurrency('USD'); setCustomAmount(''); }}
+                    className={`py-2.5 rounded-xl font-bold text-xs transition-all ${selectedCurrency === 'USD'
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                  >
+                    $
+                  </button>
+                </div>
+                <div className="relative">
+                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${selectedCurrency === 'UZS' ? 'text-gray-400' : 'text-emerald-500'}`}>
+                    {selectedCurrency === 'UZS' ? "so'm" : '$'}
+                  </span>
+                  <input
+                    type="number"
+                    placeholder={selectedCurrency === 'UZS' 
+                      ? (getTotalUzs() > 0 ? getTotalUzs().toLocaleString() : '0')
+                      : (getTotalUsd() > 0 ? getTotalUsd().toLocaleString() : '0')
+                    }
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className={`w-full pl-10 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 ${selectedCurrency === 'UZS' ? 'focus:ring-[#1447E6]/20 focus:border-[#1447E6]' : 'focus:ring-emerald-200 focus:border-emerald-400'} font-bold text-sm outline-none`}
+                  />
+                  {(selectedCurrency === 'UZS' ? getTotalUzs() > 0 : getTotalUsd() > 0) && (
                     <button
                       type="button"
-                      onClick={() => { setCustomUzs(''); setCustomUsd(''); }}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
+                      onClick={() => setCustomAmount((selectedCurrency === 'UZS' ? getTotalUzs() : getTotalUsd()).toString())}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold hover:opacity-80 transition-colors ${selectedCurrency === 'UZS' ? 'bg-[#1447E6]/10 text-[#1447E6]' : 'bg-emerald-50 text-emerald-600'}`}
                     >
-                      <FiX className="w-3.5 h-3.5" /> Tozalash
+                      to'liq
                     </button>
                   )}
                 </div>
-                {(hasCustomUzs || hasCustomUsd) && (
-                  <p className="text-[10px] text-blue-500 font-semibold">
-                    {hasCustomUzs && `so'm: ${getTotalUzs().toLocaleString()} → ${customUzsAmount.toLocaleString()}`}
-                    {hasCustomUzs && hasCustomUsd && '  •  '}
-                    {hasCustomUsd && `$: ${getTotalUsd().toLocaleString()} → ${customUsdAmount.toLocaleString()}`}
-                  </p>
+                {customAmount !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setCustomAmount('')}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
+                  >
+                    <FiX className="w-3.5 h-3.5" /> Tozalash
+                  </button>
                 )}
               </div>
             )}
@@ -569,17 +606,17 @@ const Sales = () => {
             <div className="pt-3 border-t border-gray-100 space-y-1 mb-4">
               <div className="flex justify-between font-bold text-gray-900">
                 <span className="text-sm">Jami:</span>
-                <div className="text-right space-y-0.5">
-                  {getTotalUzs() > 0 && (
-                    <p className={`text-base ${hasCustomUzs ? 'text-blue-600' : ''}`}>
-                      {hasCustomUzs ? customUzsAmount.toLocaleString() : getTotalUzs().toLocaleString()} so'm
-                    </p>
-                  )}
-                  {getTotalUsd() > 0 && (
-                    <p className={`text-base ${hasCustomUsd ? 'text-blue-600' : 'text-emerald-600'}`}>
-                      ${hasCustomUsd ? customUsdAmount.toLocaleString() : getTotalUsd().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  )}
+                <div className="text-right">
+                  <p className={`text-base ${hasCustomAmount ? 'text-blue-600' : selectedCurrency === 'USD' ? 'text-emerald-600' : ''}`}>
+                    {hasCustomAmount 
+                      ? (selectedCurrency === 'USD' 
+                          ? `$${customAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `${customAmountValue.toLocaleString()} so'm`)
+                      : (selectedCurrency === 'USD'
+                          ? (getTotalUsd() > 0 ? `$${getTotalUsd().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0')
+                          : (getTotalUzs() > 0 ? `${getTotalUzs().toLocaleString()} so'm` : '0 so\'m'))
+                    }
+                  </p>
                 </div>
               </div>
             </div>
