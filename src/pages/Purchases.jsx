@@ -10,6 +10,17 @@ import { useProducts } from '../hooks/useProducts';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const fmt = (num) => parseFloat(num || 0).toLocaleString('uz-UZ');
+
+const getProductCurrency = (product) => (product?.currency || 'uzs').toLowerCase();
+
+const getProductCostPrice = (product) => {
+  // Tan narx kiritilgan bo'lsa o'shani, aks holda sotuv narxini boshlang'ich qiymat qilamiz
+  const cost = parseFloat(product?.cost_price || 0);
+  if (cost > 0) return cost;
+  return parseFloat(product?.sale_price || 0);
+};
+
 const Purchases = () => {
   const [viewPurchase, setViewPurchase] = useState(null);
   const [modalMode, setModalMode] = useState(null); // 'create' | 'edit' | null
@@ -49,18 +60,20 @@ const Purchases = () => {
     : purchases;
 
   const addToCart = (product) => {
+    const costPrice = getProductCostPrice(product);
+    const currency = getProductCurrency(product);
     const existing = cart.find(item => item.id === product.id);
     if (existing) {
       setCart(cart.map(item =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        item.id === product.id ? { ...item, quantity: (parseInt(item.quantity) || 0) + 1, costPrice, currency } : item
       ));
     } else {
       setCart([...cart, {
         id: product.id,
         name: product.name,
         quantity: 1,
-        costPrice: parseFloat(product.cost_price || 0),
-        currency: product.currency || 'uzs'
+        costPrice,
+        currency
       }]);
     }
   };
@@ -81,7 +94,7 @@ const Purchases = () => {
         name: item.product_name,
         quantity: item.quantity,
         costPrice: parseFloat(item.cost_price || 0),
-        currency: item.currency || 'uzs'
+        currency: (item.currency || 'uzs').toLowerCase()
       }))
     );
     setNote(purchase.note || '');
@@ -255,23 +268,30 @@ const Purchases = () => {
                     </div>
                   </div>
                   <div className="flex gap-3 overflow-x-auto pb-2">
-                    {products.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => addToCart(p)}
-                        className="shrink-0 w-28 p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-[#1447E6] hover:shadow-sm transition-all active:scale-95 text-left"
-                      >
-                        <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-[#1447E6] mb-2">
-                          <FiPackage className="w-4 h-4" />
-                        </div>
-                        <p className="text-[10px] font-bold text-gray-900 truncate">{p.name}</p>
-                        <p className="text-[9px] text-gray-400 mt-0.5">Ombor: {p.quantity} {p.unit}</p>
-                      </button>
-                    ))}
+                    {products.map(p => {
+                      const productCurrency = getProductCurrency(p);
+                      const productCostPrice = getProductCostPrice(p);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => addToCart(p)}
+                          className="shrink-0 w-32 p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-[#1447E6] hover:shadow-sm transition-all active:scale-95 text-left"
+                        >
+                          <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-[#1447E6] mb-2">
+                            <FiPackage className="w-4 h-4" />
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-900 truncate">{p.name}</p>
+                          <p className="text-[9px] text-gray-400 mt-0.5">Ombor: {p.quantity} {p.unit}</p>
+                          <p className={`text-[10px] font-black mt-1 ${productCurrency === 'usd' ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                            {productCurrency === 'usd' ? `$${fmt(productCostPrice)}` : `${fmt(productCostPrice)} so'm`}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Cart — with editable cost_price */}
+                {/* Cart */}
                 {cart.length > 0 && (
                   <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                     <h3 className="text-sm font-bold text-gray-900 mb-3">Tanlangan mahsulotlar</h3>
@@ -305,20 +325,11 @@ const Purchases = () => {
                                 className="w-14 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-black text-center focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] outline-none"
                               />
                             </div>
-                            {/* Cost price input */}
+                            {/* Product cost price */}
                             <div className="flex-1 flex flex-col gap-0.5">
                               <span className="text-[9px] text-gray-400 font-semibold">Tan narx</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  value={item.costPrice}
-                                  onChange={(e) => setCart(cart.map(c => c.id === item.id ? { ...c, costPrice: e.target.value } : c))}
-                                  placeholder="0"
-                                  className={`flex-1 px-3 py-1.5 bg-white border rounded-lg text-xs font-bold outline-none focus:ring-2 ${item.currency === 'usd' ? 'border-emerald-200 focus:ring-emerald-200 focus:border-emerald-400' : 'border-gray-200 focus:ring-[#1447E6]/20 focus:border-[#1447E6]'}`}
-                                />
-                                <span className={`text-[10px] font-bold shrink-0 ${item.currency === 'usd' ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                  {item.currency === 'usd' ? '$' : "so'm"}
-                                </span>
+                              <div className={`px-3 py-1.5 bg-white border rounded-lg text-xs font-black ${item.currency === 'usd' ? 'border-emerald-100 text-emerald-600' : 'border-gray-200 text-[#1447E6]'}`}>
+                                {item.currency === 'usd' ? `$${fmt(item.costPrice)}` : `${fmt(item.costPrice)} so'm`}
                               </div>
                             </div>
                           </div>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FiTrendingUp, FiDollarSign, FiShoppingCart, FiCreditCard,
-  FiPackage, FiBarChart2, FiLoader, FiUsers, FiAlertCircle
+  FiPackage, FiBarChart2, FiLoader, FiUsers, FiAlertCircle, FiTruck
 } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useDashboardStats, useProfitReport, useWarehouseReport } from '../hooks/useReports';
@@ -29,8 +29,8 @@ const StatCard = ({ icon: Icon, bg, color, title, value, sub, loading, valueUSD 
     ) : (
       <>
         <p className={`text-base font-black ${color} leading-tight`}>{value}</p>
-        {valueUSD != null && (
-          <p className="text-sm font-bold text-gray-500">{fmt(valueUSD)} $</p>
+        {valueUSD !== undefined && valueUSD !== null && (
+          <p className="text-sm font-bold text-gray-500">${fmt(valueUSD)}</p>
         )}
       </>
     )}
@@ -80,9 +80,14 @@ const Reports = () => {
   const revUSD    = parseFloat(dashStats?.revenue_usd ?? 0);
   const profUZS   = parseFloat(dashStats?.profit_uzs ?? dashStats?.gross_profit_uzs ?? 0);
   const profUSD   = parseFloat(dashStats?.profit_usd ?? dashStats?.gross_profit_usd ?? 0);
+  const costUZS   = parseFloat(dashStats?.cost_uzs ?? dashStats?.sale_cost_uzs ?? 0);
+  const costUSD   = parseFloat(dashStats?.cost_usd ?? dashStats?.sale_cost_usd ?? 0);
+  const purchaseUZS = parseFloat(dashStats?.purchase_total_uzs ?? dashStats?.purchase_total ?? 0);
+  const purchaseUSD = parseFloat(dashStats?.purchase_total_usd ?? 0);
   const debtUZS   = parseFloat(dashStats?.debt_uzs    ?? 0);
   const debtUSD   = parseFloat(dashStats?.debt_usd    ?? 0);
   const salesCount = dashStats?.sales_count ?? 0;
+  const purchasesCount = dashStats?.purchases_count ?? 0;
   const chartData  = (dashStats?.daily_sales || []).map(d => ({
     name: d.date,
     'so\'m': parseFloat(d.amount_uzs || 0),
@@ -162,8 +167,24 @@ const Reports = () => {
                 icon={FiTrendingUp} bg="bg-teal-50" color="text-teal-600"
                 title="Sof Foyda"
                 value={`${fmt(profUZS)} so'm`}
-                valueUSD={profUSD > 0 ? profUSD : null}
+                valueUSD={profUSD}
                 sub={dashPeriod}
+                loading={dashLoading}
+              />
+              <StatCard
+                icon={FiCreditCard} bg="bg-amber-50" color="text-amber-600"
+                title="Xarajat"
+                value={`${fmt(costUZS)} so'm`}
+                valueUSD={costUSD}
+                sub={dashPeriod}
+                loading={dashLoading}
+              />
+              <StatCard
+                icon={FiTruck} bg="bg-indigo-50" color="text-indigo-600"
+                title="Xarid jami"
+                value={`${fmt(purchaseUZS)} so'm`}
+                valueUSD={purchaseUSD}
+                sub={`${purchasesCount} ta xarid`}
                 loading={dashLoading}
               />
               <StatCard
@@ -211,11 +232,13 @@ const Reports = () => {
             {/* Revenue vs Profit bar */}
             {!dashLoading && (revUZS > 0 || profUZS > 0) && (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Tushum vs Foyda</h3>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Tushum, xarajat va foyda</h3>
                 <div className="space-y-3">
                   {[
                     { label: 'Tushum (so\'m)', val: revUZS,  color: 'bg-[#1447E6]',   text: 'text-[#1447E6]',   max: revUZS  },
                     { label: 'Tushum ($)',      val: revUSD,  color: 'bg-emerald-500', text: 'text-emerald-600', max: revUSD  },
+                    { label: 'Xarajat (so\'m)', val: costUZS, color: 'bg-amber-500',   text: 'text-amber-600',   max: revUZS  },
+                    { label: 'Xarid (so\'m)',   val: purchaseUZS, color: 'bg-indigo-500', text: 'text-indigo-600', max: Math.max(revUZS, purchaseUZS) },
                     { label: 'Foyda (so\'m)',   val: profUZS, color: 'bg-teal-500',    text: 'text-teal-600',    max: revUZS  },
                   ].map((row, i) => {
                     const pct = Math.min(100, row.val > 0 && row.max > 0 ? (row.val / row.max) * 100 : 0);
@@ -360,14 +383,18 @@ const Reports = () => {
                 {/* Summary cards */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
-                    { label: 'Tushum',         uzs: profitData.revenue_uzs    ?? 0, usd: profitData.revenue_usd    ?? 0, bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
-                    { label: 'Sotuv xarajati', uzs: profitData.sale_cost_uzs  ?? 0, usd: 0,                              bg: 'bg-orange-50',  color: 'text-orange-600'  },
-                    { label: 'Yalpi foyda',    uzs: profitData.gross_profit_uzs ?? 0, usd: profitData.gross_profit_usd ?? 0, bg: 'bg-teal-50', color: 'text-teal-600'    },
+                    { label: 'Tushum',         uzs: profitData.revenue_uzs      ?? 0, usd: profitData.revenue_usd                                      ?? 0, bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
+                    { label: 'Sotuv xarajati', uzs: profitData.sale_cost_uzs    ?? 0, usd: profitData.cost_usd ?? profitData.sale_cost_usd              ?? 0, bg: 'bg-orange-50',  color: 'text-orange-600'  },
+                    { label: 'Yalpi foyda',    uzs: profitData.gross_profit_uzs ?? 0, usd: profitData.gross_profit_usd ?? profitData.profit_usd         ?? 0, bg: 'bg-teal-50',    color: 'text-teal-600'    },
                   ].map((item, i) => (
                     <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                       <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${item.color}`}>{item.label}</p>
                       <p className={`text-base font-black ${item.color} leading-tight`}>{fmt(item.uzs)} so'm</p>
-                      {parseFloat(item.usd) > 0 && <p className="text-sm font-bold text-emerald-600">${fmt(item.usd)}</p>}
+                      {parseFloat(item.usd) !== 0 && (
+                        <p className={`text-sm font-bold ${parseFloat(item.usd) < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                          ${fmt(item.usd)}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -381,8 +408,8 @@ const Reports = () => {
                         <div key={i} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
                           <span className="text-xs font-semibold text-gray-500">{row.month || row.date || row.period}</span>
                           <div className="text-right space-y-0.5">
-                            {parseFloat(row.revenue_uzs || 0) > 0 && <p className="text-xs font-bold text-[#1447E6]">{fmt(row.revenue_uzs)} so'm</p>}
-                            {parseFloat(row.revenue_usd || 0) > 0 && <p className="text-xs font-bold text-emerald-600">${fmt(row.revenue_usd)}</p>}
+                            {parseFloat(row.revenue_uzs || 0) !== 0 && <p className="text-xs font-bold text-[#1447E6]">{fmt(row.revenue_uzs)} so'm</p>}
+                            {parseFloat(row.revenue_usd || 0) !== 0 && <p className="text-xs font-bold text-emerald-600">${fmt(row.revenue_usd)}</p>}
                             <p className="text-[10px] text-gray-400 font-semibold">{row.count} ta sotuv</p>
                           </div>
                         </div>

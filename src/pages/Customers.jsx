@@ -134,7 +134,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const payDebtMutation = usePayDebt();
   const sendReminderMutation = useSendDebtReminder();
   const { data: customerDetail, isLoading: detailLoading } = useCustomer(customer?.id);
-  const { data: historyData, isLoading: historyLoading } = useCustomerSalesHistory(showHistory ? customer?.id : null);
+  const { data: historyData, isLoading: historyLoading } = useCustomerSalesHistory(customer?.id);
   const salesHistory = historyData?.results || historyData || [];
 
   if (!customer) return null;
@@ -146,6 +146,10 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const totalSpentUzs = parseFloat(detail.total_spent_uzs || 0);
   const totalSpentUsd = parseFloat(detail.total_spent_usd || 0);
   const isLinked = customerDetail?.is_linked ?? false;
+
+  const latestDebtSale = salesHistory.find(s => s.debt_due_date);
+  const debtDueDate = detail.debt_due_date || latestDebtSale?.debt_due_date;
+  const isDebtOverdue = latestDebtSale?.is_overdue ?? (debtDueDate && new Date(debtDueDate) < new Date());
 
   const handlePayDebt = async (e) => {
     e.preventDefault();
@@ -231,6 +235,11 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
               <>
                 {debtUZS > 0 && <span className="font-bold text-sm text-red-600 block">{debtUZS.toLocaleString()} so'm</span>}
                 {debtUSD > 0 && <span className="font-bold text-sm text-red-600 block">${debtUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                {debtDueDate && (
+                  <span className={`text-[10px] font-bold mt-1.5 block ${isDebtOverdue ? 'text-red-500' : 'text-orange-500'}`}>
+                    {isDebtOverdue ? '⚠ Muddati o\'tgan' : `Muddat: ${new Date(debtDueDate).toLocaleDateString('uz-UZ')}`}
+                  </span>
+                )}
               </>
             ) : (
               <span className="font-bold text-sm text-blue-600">Qarsiz</span>
@@ -309,6 +318,23 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
               <div className="flex-1">
                 <span className="text-[10px] text-gray-400 block">Eslatma</span>
                 <span className="text-sm font-medium text-gray-700">{detail.note}</span>
+              </div>
+            </div>
+          )}
+
+          {hasDebt && debtDueDate && (
+            <div className="flex items-center gap-3 p-4">
+              <div className={`w-9 h-9 ${isDebtOverdue ? 'bg-red-50' : 'bg-orange-50'} rounded-xl flex items-center justify-center shrink-0`}>
+                <FiCalendar className={`w-4 h-4 ${isDebtOverdue ? 'text-red-400' : 'text-orange-400'}`} />
+              </div>
+              <div className="flex-1">
+                <span className="text-[10px] text-gray-400 block">Qarz to'lash sanasi</span>
+                <span className={`text-sm font-bold ${isDebtOverdue ? 'text-red-500' : 'text-orange-600'}`}>
+                  {new Date(debtDueDate).toLocaleDateString('uz-UZ')}
+                </span>
+                {isDebtOverdue && (
+                  <span className="text-[10px] font-bold text-red-400 block">Muddati o'tgan!</span>
+                )}
               </div>
             </div>
           )}

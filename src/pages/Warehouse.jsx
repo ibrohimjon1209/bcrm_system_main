@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiPackage,
-  FiCheck, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight
+  FiCheck, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight,
+  FiLayers, FiChevronRight as FiArrowRight
 } from 'react-icons/fi';
 import {
   useProducts, useProduct, useCreateProduct, useUpdateProduct, useDeleteProduct,
@@ -125,6 +126,8 @@ const Warehouse = () => {
   const [editValue, setEditValue] = useState('');
   const [showCatDeleteConfirm, setShowCatDeleteConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [showCategoryStats, setShowCategoryStats] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -138,7 +141,7 @@ const Warehouse = () => {
 
   useEffect(() => { setPage(1); }, [searchTerm]);
 
-  const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm, page });
+  const { data: productsData, isLoading: productsLoading } = useProducts({ search: searchTerm, page, ordering: 'quantity' });
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: lowStockData } = useLowStockProducts();
   const { data: singleProduct, isLoading: productLoading } = useProduct(selectedProduct?.id);
@@ -171,6 +174,31 @@ const Warehouse = () => {
   const totalProductCount = productsData?.count ?? products.length;
   const lowStockRaw = lowStockData?.results || lowStockData || [];
   const lowStockCount = Array.isArray(lowStockRaw) ? lowStockRaw.length : 0;
+
+  // Kategoriya statistikasi to'g'ridan-to'g'ri /api/products/categories/ dan keladi
+  const categoryStats = categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    count: c.product_count ?? 0,
+    quantity: parseInt(c.total_quantity) || 0,
+    saleUzs: parseFloat(c.total_sale_price_uzs) || 0,
+    saleUsd: parseFloat(c.total_sale_price_usd) || 0,
+    costUzs: parseFloat(c.total_cost_price_uzs) || 0,
+    costUsd: parseFloat(c.total_cost_price_usd) || 0,
+    lowStock: 0,
+  })).sort((a, b) => a.quantity - b.quantity);
+
+  const categoryTotals = categoryStats.reduce((acc, c) => {
+    acc.qty += c.quantity;
+    acc.saleUzs += c.saleUzs; acc.saleUsd += c.saleUsd;
+    acc.costUzs += c.costUzs; acc.costUsd += c.costUsd;
+    return acc;
+  }, { qty: 0, saleUzs: 0, saleUsd: 0, costUzs: 0, costUsd: 0 });
+
+  // Drill-down: tanlangan kategoriyaning mahsulotlari
+  const { data: catProductsData, isLoading: catProductsLoading } = useProducts(
+    selectedCategory ? { category: selectedCategory.id, ordering: 'quantity' } : {}
+  );
 
   const getStatusCfg = (status) => statusConfig[status] || statusConfig.good;
 
@@ -303,7 +331,7 @@ const Warehouse = () => {
           </div>
 
           {/* Stats bar */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="bg-blue-50 rounded-2xl p-3 border border-blue-100">
               <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Jami mahsulotlar</p>
               <p className="text-xl font-black text-blue-700">{totalProductCount}</p>
@@ -313,6 +341,21 @@ const Warehouse = () => {
               <p className={`text-xl font-black ${lowStockCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{lowStockCount}</p>
             </div>
           </div>
+
+          {/* Category stats button */}
+          <button
+            onClick={() => setShowCategoryStats(true)}
+            className="w-full mb-4 flex items-center gap-3 bg-gradient-to-r from-[#1447E6] to-[#0F3CC7] text-white rounded-2xl px-4 py-3 shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
+          >
+            <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
+              <FiLayers className="w-4 h-4" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-bold leading-tight">Kategoriyalar bo'yicha</p>
+              <p className="text-[11px] text-blue-200">{categoryStats.length} ta kategoriya • {categoryTotals.qty.toLocaleString()} dona qoldiq</p>
+            </div>
+            <FiArrowRight className="w-4 h-4 text-blue-200 shrink-0" />
+          </button>
 
           {/* Search */}
           <div className="relative">
@@ -499,6 +542,170 @@ const Warehouse = () => {
                 O'chirish
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Stats Modal */}
+      {showCategoryStats && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-end md:items-center md:justify-center" onClick={() => { setShowCategoryStats(false); setSelectedCategory(null); }}>
+          <div className="bg-[#F0F4FF] rounded-t-3xl md:rounded-3xl w-full md:max-w-lg max-h-[88vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-6 pb-5 shrink-0 relative overflow-hidden">
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  {selectedCategory ? (
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center text-white hover:bg-white/25 transition-colors shrink-0"
+                    >
+                      <FiChevronLeft className="w-5 h-5" />
+                    </button>
+                  ) : (
+                    <div className="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center shrink-0">
+                      <FiLayers className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h2 className="text-white text-lg font-bold leading-tight truncate">
+                      {selectedCategory ? selectedCategory.name : "Kategoriyalar bo'yicha"}
+                    </h2>
+                    <p className="text-blue-200 text-xs truncate">
+                      {selectedCategory
+                        ? `${selectedCategory.count} ta mahsulot • ${selectedCategory.quantity.toLocaleString()} dona`
+                        : `${categoryStats.length} ta kategoriya • ${categoryTotals.qty.toLocaleString()} dona`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowCategoryStats(false); setSelectedCategory(null); }}
+                  className="w-9 h-9 bg-white/15 text-white rounded-xl flex items-center justify-center hover:bg-white/25 transition-colors shrink-0"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal body */}
+            {selectedCategory ? (
+              /* ── Drill-down: tanlangan kategoriya mahsulotlari ── */
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* Category value summary */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-[#1447E6] uppercase tracking-wider mb-1.5">Sotuv summasi</p>
+                      {selectedCategory.saleUzs > 0 && <p className="text-sm font-black text-[#1447E6]">{selectedCategory.saleUzs.toLocaleString()} so'm</p>}
+                      {selectedCategory.saleUsd > 0 && <p className="text-sm font-black text-emerald-600">${selectedCategory.saleUsd.toLocaleString()}</p>}
+                      {!selectedCategory.saleUzs && !selectedCategory.saleUsd && <p className="text-sm font-black text-gray-300">—</p>}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-1.5">Tan narx summasi</p>
+                      {selectedCategory.costUzs > 0 && <p className="text-sm font-black text-orange-600">{selectedCategory.costUzs.toLocaleString()} so'm</p>}
+                      {selectedCategory.costUsd > 0 && <p className="text-sm font-black text-orange-500">${selectedCategory.costUsd.toLocaleString()}</p>}
+                      {!selectedCategory.costUzs && !selectedCategory.costUsd && <p className="text-sm font-black text-gray-300">—</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products in category */}
+                {catProductsLoading ? (
+                  <div className="py-10 flex justify-center"><FiLoader className="w-7 h-7 text-[#1447E6] animate-spin" /></div>
+                ) : (catProductsData?.results || []).length === 0 ? (
+                  <div className="py-12 text-center text-gray-400">
+                    <FiPackage className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">Mahsulot topilmadi</p>
+                  </div>
+                ) : (catProductsData?.results || []).map((p) => {
+                  const sc = getStatusCfg(p.status);
+                  const isUsd = (p.currency || 'uzs').toLowerCase() === 'usd';
+                  const salePrice = parseFloat(p.sale_price || 0);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => { setShowCategoryStats(false); setSelectedCategory(null); openEditModal(p); }}
+                      className="w-full bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center gap-3 text-left hover:border-[#1447E6] active:scale-[0.99] transition-all"
+                    >
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${sc.dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{p.name}</p>
+                        <p className={`text-xs font-bold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                          {isUsd ? `$${salePrice.toLocaleString()}` : `${salePrice.toLocaleString()} so'm`}
+                        </p>
+                      </div>
+                      <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2.5 py-1">
+                        <p className="text-sm font-black text-gray-900 leading-tight">{p.quantity}</p>
+                        <p className="text-[9px] text-gray-400">{p.unit || 'dona'}</p>
+                      </div>
+                      <FiEdit2 className="w-4 h-4 text-gray-300 shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* ── Kategoriyalar ro'yxati + umumiy summa ── */
+              <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+                {/* Grand total */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Jami ombor summasi</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-[#1447E6] mb-1">Sotuv</p>
+                      {categoryTotals.saleUzs > 0 && <p className="text-base font-black text-[#1447E6]">{categoryTotals.saleUzs.toLocaleString()} so'm</p>}
+                      {categoryTotals.saleUsd > 0 && <p className="text-base font-black text-emerald-600">${categoryTotals.saleUsd.toLocaleString()}</p>}
+                      {!categoryTotals.saleUzs && !categoryTotals.saleUsd && <p className="text-base font-black text-gray-300">—</p>}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-orange-500 mb-1">Tan narx</p>
+                      {categoryTotals.costUzs > 0 && <p className="text-base font-black text-orange-600">{categoryTotals.costUzs.toLocaleString()} so'm</p>}
+                      {categoryTotals.costUsd > 0 && <p className="text-base font-black text-orange-500">${categoryTotals.costUsd.toLocaleString()}</p>}
+                      {!categoryTotals.costUzs && !categoryTotals.costUsd && <p className="text-base font-black text-gray-300">—</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {categoryStats.length === 0 ? (
+                  <div className="py-16 text-center text-gray-400">
+                    <FiLayers className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">Kategoriya topilmadi</p>
+                  </div>
+                ) : categoryStats.map((cat) => {
+                  const isEmpty = cat.quantity <= 0;
+                  return (
+                    <button
+                      key={cat.name}
+                      onClick={() => setSelectedCategory(cat)}
+                      className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 text-left hover:border-[#1447E6] active:scale-[0.99] transition-all"
+                    >
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${cat.lowStock > 0 || isEmpty ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-[#1447E6]'}`}>
+                        <FiPackage className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{cat.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-[10px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">{cat.count} ta</span>
+                          {cat.saleUzs > 0 && <span className="text-[10px] font-bold text-[#1447E6]">{cat.saleUzs.toLocaleString()} so'm</span>}
+                          {cat.saleUsd > 0 && <span className="text-[10px] font-bold text-emerald-600">${cat.saleUsd.toLocaleString()}</span>}
+                          {cat.lowStock > 0 && (
+                            <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-lg flex items-center gap-1">
+                              <FiAlertCircle className="w-2.5 h-2.5" /> {cat.lowStock}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 flex items-center gap-1.5">
+                        <div>
+                          <p className={`text-lg font-black leading-tight ${isEmpty ? 'text-red-500' : 'text-gray-900'}`}>{cat.quantity.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400">dona</p>
+                        </div>
+                        <FiArrowRight className="w-4 h-4 text-gray-300" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

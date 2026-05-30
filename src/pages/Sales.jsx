@@ -148,7 +148,7 @@ const Sales = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [productPage, setProductPage] = useState(1);
   const [cart, setCart] = useState([]);
-  const [paymentType, setPaymentType] = useState('cash');
+  const [paymentType, setPaymentType] = useState('debt');
   const [customUzs, setCustomUzs] = useState('');
   const [customUsd, setCustomUsd] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('UZS');
@@ -372,7 +372,7 @@ const Sales = () => {
     setCustomUsd('');
     setSelectedCurrency('UZS');
     setCustomAmount('');
-    setPaymentType('cash');
+    setPaymentType('debt');
     setDebtDueDate('');
     setDebtNote('');
     setShowDebtModal(false);

@@ -2,10 +2,10 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FiBell, FiShoppingCart, FiUsers, FiPackage, FiBarChart2,
-  FiLoader, FiTrendingUp, FiAlertCircle
+  FiLoader, FiTrendingUp, FiAlertCircle, FiCreditCard, FiTruck, FiDollarSign
 } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { useDashboardStats, useProfitReport } from '../hooks/useReports';
+import { useDashboardStats } from '../hooks/useReports';
 import { useLowStockProducts, useProducts } from '../hooks/useProducts';
 import { useSales, useOverdueSales } from '../hooks/useSales';
 import { useDebtors } from '../hooks/useCustomers';
@@ -13,8 +13,6 @@ import { useDebtors } from '../hooks/useCustomers';
 const Home = () => {
   const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading } = useDashboardStats('today');
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const { data: profitData } = useProfitReport(todayStr, todayStr);
   const { data: lowStockProducts = [], isLoading: lowStockLoading } = useLowStockProducts();
   const { data: productsData } = useProducts({});
   const totalProductsCount = productsData?.count || 0;
@@ -25,11 +23,20 @@ const Home = () => {
   const debtorsCount = Array.isArray(debtorsData) ? debtorsData.length : (debtorsData?.results?.length || debtorsData?.count || 0);
 
   const recentSales = (recentSalesData?.results || []).slice(0, 5);
+  const fmt = (num) => parseFloat(num || 0).toLocaleString('uz-UZ');
 
   const revUZS  = parseFloat(stats?.revenue_uzs ?? 0);
   const revUSD  = parseFloat(stats?.revenue_usd ?? 0);
-  const profUZS = parseFloat(profitData?.gross_profit_uzs ?? stats?.profit_uzs ?? 0);
-  const profUSD = parseFloat(profitData?.gross_profit_usd ?? 0);
+  const costUZS = parseFloat(stats?.cost_uzs ?? 0);
+  const costUSD = parseFloat(stats?.cost_usd ?? 0);
+  const profUZS = parseFloat(stats?.profit_uzs ?? stats?.gross_profit_uzs ?? 0);
+  const profUSD = parseFloat(stats?.profit_usd ?? stats?.gross_profit_usd ?? 0);
+  const purchaseUZS = parseFloat(stats?.purchase_total_uzs ?? stats?.purchase_total ?? 0);
+  const purchaseUSD = parseFloat(stats?.purchase_total_usd ?? 0);
+  const debtUZS = parseFloat(stats?.debt_uzs ?? 0);
+  const debtUSD = parseFloat(stats?.debt_usd ?? 0);
+  const salesCount = stats?.sales_count ?? 0;
+  const purchasesCount = stats?.purchases_count ?? 0;
 
   const chartData = (stats?.daily_sales || []).map(item => ({
     name:  item.date,
@@ -47,6 +54,64 @@ const Home = () => {
   }
 
   const span = (formatted) => formatted.length > 9 ? 'col-span-2 md:col-span-1' : 'col-span-1';
+  const statCards = [
+    {
+      label: 'Tushum',
+      icon: FiDollarSign,
+      path: '/reports',
+      value: `${fmt(revUZS)} so'm`,
+      sub: `$${fmt(revUSD)}`,
+      className: 'col-span-2 md:col-span-1',
+    },
+    {
+      label: 'Foyda',
+      icon: FiTrendingUp,
+      path: '/reports',
+      value: `${fmt(profUZS)} so'm`,
+      sub: `$${fmt(profUSD)}`,
+      className: 'col-span-2 md:col-span-1',
+    },
+    {
+      label: 'Xarajat',
+      icon: FiCreditCard,
+      path: '/reports',
+      value: `${fmt(costUZS)} so'm`,
+      sub: `$${fmt(costUSD)}`,
+      className: 'col-span-2 md:col-span-1',
+    },
+    {
+      label: 'Xarid jami',
+      icon: FiTruck,
+      path: '/reports',
+      value: `${fmt(purchaseUZS)} so'm`,
+      sub: `$${fmt(purchaseUSD)} | ${purchasesCount} ta`,
+      className: 'col-span-2 md:col-span-1',
+    },
+    {
+      label: 'Qarz',
+      icon: FiCreditCard,
+      onClick: () => navigate('/customers', { state: { filter: 'Qarzdorlar' } }),
+      value: `${fmt(debtUZS)} so'm`,
+      sub: `$${fmt(debtUSD)} | ${debtorsCount} ta`,
+      className: 'col-span-2 md:col-span-1',
+    },
+    {
+      label: 'Sotuvlar',
+      icon: FiShoppingCart,
+      path: '/reports',
+      value: salesCount,
+      sub: `${purchasesCount} ta xarid`,
+      className: span(String(salesCount)),
+    },
+    {
+      label: 'Mahsulotlar',
+      icon: FiPackage,
+      path: '/warehouse',
+      value: totalProductsCount,
+      sub: 'dona',
+      className: span(String(totalProductsCount)),
+    },
+  ];
 
   const quickActions = [
     { label: 'Sotuv', icon: FiShoppingCart, path: '/sales', bg: 'bg-blue-50', color: 'text-[#1447E6]' },
@@ -83,37 +148,28 @@ const Home = () => {
 
           {/* Stats grid — each card spans full width only if its number is long */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
-            <Link to='/reports'>
-              <div className="col-span-2 md:col-span-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20">
-                <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Tushum</p>
-                <p className="text-white text-base md:text-lg font-black leading-tight">{revUZS.toLocaleString()} so'm</p>
-                <p className="text-blue-200 text-sm font-bold mt-0.5">{revUSD.toLocaleString()} $</p>
-              </div>
-            </Link>
+            {statCards.map(({ label, path, onClick, value, sub, className, icon: Icon }) => {
+              const content = (
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20 h-full">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest">{label}</p>
+                    <Icon className="w-3.5 h-3.5 text-blue-200 shrink-0" />
+                  </div>
+                  <p className="text-white text-base md:text-lg font-black leading-tight">{value}</p>
+                  <p className="text-blue-200 text-xs md:text-sm font-bold mt-0.5">{sub}</p>
+                </div>
+              );
 
-            <Link to='/reports'>
-              <div className="col-span-2 md:col-span-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20">
-                <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Foyda</p>
-                <p className="text-white text-base md:text-lg font-black leading-tight">{profUZS.toLocaleString()} so'm</p>
-                {profUSD > 0 && <p className="text-blue-200 text-sm font-bold mt-0.5">{profUSD.toLocaleString()} $</p>}
-              </div>
-            </Link>
-            
-            <button
-              onClick={() => navigate('/customers', { state: { filter: 'Qarzdorlar' } })}
-              className={`${span(String(debtorsCount))} cursor-pointer bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20 text-left hover:bg-white/20 transition-colors`}
-            >
-              <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Qarzdorlar</p>
-              <p className="text-white text-lg md:text-xl font-black leading-tight">{debtorsCount}</p>
-              <p className="text-blue-300 text-[10px] font-medium">ta mijoz</p>
-            </button>
-            <Link to='/warehouse'>
-            <div className={`${span(String(totalProductsCount))} bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20`}>
-              <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Mahsulotlar</p>
-              <p className="text-white text-lg md:text-xl font-black leading-tight">{totalProductsCount}</p>
-              <p className="text-blue-300 text-[10px] font-medium">dona</p>
-            </div>
-            </Link>
+              return path ? (
+                <Link key={label} to={path} className={className}>
+                  {content}
+                </Link>
+              ) : (
+                <button key={label} onClick={onClick} className={`${className} cursor-pointer text-left hover:bg-white/10 transition-colors rounded-2xl`}>
+                  {content}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
