@@ -11,71 +11,11 @@ import {
 
 const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
 
-const PriceGroup = ({ label, uzsValue, usdValue, onUzsChange, onUsdChange, onConvert, rate, rateLoading }) => (
-  <div>
-    <div className="flex items-center justify-between mb-1.5">
-      <label className="text-xs font-semibold text-gray-500">{label}</label>
-      <button
-        type="button"
-        onClick={onConvert}
-        className="flex items-center gap-1 text-[10px] font-bold text-[#1447E6] bg-blue-50 px-2 py-0.5 rounded-lg hover:bg-blue-100 active:scale-95 transition-all"
-      >
-        ⇄ Konvert
-        {rateLoading ? (
-          <span className="text-[9px] text-gray-400 font-normal">yuklanmoqda...</span>
-        ) : (
-          <span className="text-[9px] text-gray-400 font-normal">1$={rate?.toLocaleString()}</span>
-        )}
-      </button>
-    </div>
-    <div className="grid grid-cols-2 gap-3">
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#1447E6]">so'm</span>
-        <input
-          type="number"
-          value={uzsValue}
-          onChange={onUzsChange}
-          className={inputClass + ' pl-12'}
-          placeholder="0"
-        />
-      </div>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">$</span>
-        <input
-          type="number"
-          value={usdValue}
-          onChange={onUsdChange}
-          className={inputClass + ' pl-7'}
-          placeholder="0"
-        />
-      </div>
-    </div>
-  </div>
-);
-
-const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending, usdRate, rateLoading }) => {
-  const hasPrice = parseFloat(formData.sale_price_uzs || 0) > 0 || parseFloat(formData.sale_price_usd || 0) > 0;
-
-  const handleConvert = (type) => {
-    const rate = usdRate || 12800;
-    if (type === 'cost') {
-      const uzs = parseFloat(formData.cost_price_uzs);
-      const usd = parseFloat(formData.cost_price_usd);
-      if (uzs > 0) {
-        setFormData({ ...formData, cost_price_usd: (uzs / rate).toFixed(2) });
-      } else if (usd > 0) {
-        setFormData({ ...formData, cost_price_uzs: Math.round(usd * rate).toString() });
-      }
-    } else {
-      const uzs = parseFloat(formData.sale_price_uzs);
-      const usd = parseFloat(formData.sale_price_usd);
-      if (uzs > 0) {
-        setFormData({ ...formData, sale_price_usd: (uzs / rate).toFixed(2) });
-      } else if (usd > 0) {
-        setFormData({ ...formData, sale_price_uzs: Math.round(usd * rate).toString() });
-      }
-    }
-  };
+const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending }) => {
+  const isUzs = formData.currency === 'uzs';
+  const hasPrice = parseFloat(formData.sale_price || 0) > 0;
+  const symbol = isUzs ? "so'm" : '$';
+  const symbolClass = isUzs ? 'text-[#1447E6]' : 'text-emerald-600';
 
   return (
     <div className="p-4 space-y-4">
@@ -83,6 +23,7 @@ const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel,
         <label className="block text-xs font-semibold text-gray-500 mb-1.5">Mahsulot nomi</label>
         <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Mahsulot nomini kiriting" />
       </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
@@ -101,30 +42,60 @@ const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel,
           </select>
         </div>
       </div>
+
       <div>
         <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
         <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className={inputClass} placeholder="0" />
       </div>
-      <PriceGroup
-        label="Tan narx"
-        uzsValue={formData.cost_price_uzs}
-        usdValue={formData.cost_price_usd}
-        onUzsChange={(e) => setFormData({ ...formData, cost_price_uzs: e.target.value })}
-        onUsdChange={(e) => setFormData({ ...formData, cost_price_usd: e.target.value })}
-        onConvert={() => handleConvert('cost')}
-        rate={usdRate}
-        rateLoading={rateLoading}
-      />
-      <PriceGroup
-        label="Sotuv narxi"
-        uzsValue={formData.sale_price_uzs}
-        usdValue={formData.sale_price_usd}
-        onUzsChange={(e) => setFormData({ ...formData, sale_price_uzs: e.target.value })}
-        onUsdChange={(e) => setFormData({ ...formData, sale_price_usd: e.target.value })}
-        onConvert={() => handleConvert('sale')}
-        rate={usdRate}
-        rateLoading={rateLoading}
-      />
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-2">Valyuta</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, currency: 'uzs', sale_price: '', cost_price: '' })}
+            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${isUzs ? 'bg-[#1447E6] text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            so'm (UZS)
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, currency: 'usd', sale_price: '', cost_price: '' })}
+            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${!isUzs ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            $ (USD)
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
+        <div className="relative">
+          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${symbolClass}`}>{symbol}</span>
+          <input
+            type="number"
+            value={formData.cost_price}
+            onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+            className={inputClass + (isUzs ? ' pl-12' : ' pl-7')}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi</label>
+        <div className="relative">
+          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${symbolClass}`}>{symbol}</span>
+          <input
+            type="number"
+            value={formData.sale_price}
+            onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+            className={inputClass + (isUzs ? ' pl-12' : ' pl-7')}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
       <div className="flex gap-3 pt-2">
         <button onClick={onSubmit} disabled={isPending || !formData.name || !hasPrice} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
           {isPending && <FiLoader className="animate-spin w-4 h-4" />}
@@ -155,25 +126,13 @@ const Warehouse = () => {
   const [showCatDeleteConfirm, setShowCatDeleteConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
-  const [usdRate, setUsdRate] = useState(12800);
-  const [rateLoading, setRateLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('https://open.er-api.com/v6/latest/USD')
-      .then(r => r.json())
-      .then(data => { if (data.rates?.UZS) setUsdRate(Math.round(data.rates.UZS)); })
-      .catch(() => {})
-      .finally(() => setRateLoading(false));
-  }, []);
-
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     quantity: '',
-    sale_price_uzs: '',
-    sale_price_usd: '',
-    cost_price_uzs: '',
-    cost_price_usd: '',
+    sale_price: '',
+    cost_price: '',
+    currency: 'uzs',
     unit: 'dona',
   });
 
@@ -186,20 +145,13 @@ const Warehouse = () => {
 
   useEffect(() => {
     if (singleProduct && showEditModal) {
-      const costUzs = parseFloat(singleProduct.cost_price_uzs || 0) > 0 ? singleProduct.cost_price_uzs
-        : (singleProduct.currency === 'uzs' && parseFloat(singleProduct.cost_price || 0) > 0 ? singleProduct.cost_price : '');
-      const costUsd = parseFloat(singleProduct.cost_price_usd || 0) > 0 ? singleProduct.cost_price_usd
-        : (singleProduct.currency === 'usd' && parseFloat(singleProduct.cost_price || 0) > 0 ? singleProduct.cost_price : '');
       setFormData({
         name: singleProduct.name || '',
         category: singleProduct.category?.toString() || '',
         quantity: singleProduct.quantity?.toString() || '0',
-        sale_price_uzs: parseFloat(singleProduct.sale_price_uzs || 0) > 0 ? singleProduct.sale_price_uzs
-          : (singleProduct.currency === 'uzs' && parseFloat(singleProduct.sale_price || 0) > 0 ? singleProduct.sale_price : ''),
-        sale_price_usd: parseFloat(singleProduct.sale_price_usd || 0) > 0 ? singleProduct.sale_price_usd
-          : (singleProduct.currency === 'usd' && parseFloat(singleProduct.sale_price || 0) > 0 ? singleProduct.sale_price : ''),
-        cost_price_uzs: costUzs,
-        cost_price_usd: costUsd,
+        sale_price: singleProduct.sale_price || '',
+        cost_price: singleProduct.cost_price || '',
+        currency: singleProduct.currency || 'uzs',
         unit: singleProduct.unit || 'dona',
       });
     }
@@ -222,28 +174,17 @@ const Warehouse = () => {
 
   const getStatusCfg = (status) => statusConfig[status] || statusConfig.good;
 
-  // Map form UZS/USD fields → API fields (sale_price, cost_price, currency)
   const buildProductPayload = () => {
-    const saleUzs = parseFloat(formData.sale_price_uzs) || 0;
-    const saleUsd = parseFloat(formData.sale_price_usd) || 0;
-    const costUzs = parseFloat(formData.cost_price_uzs) || 0;
-    const costUsd = parseFloat(formData.cost_price_usd) || 0;
-
-    const useUzs = saleUzs > 0;
-    const currency = useUzs ? 'uzs' : 'usd';
-    const salePrice = useUzs ? saleUzs.toString() : (saleUsd > 0 ? saleUsd.toString() : '0');
-    const costPrice = useUzs ? costUzs : costUsd;
-
     const payload = {
       name: formData.name,
       category: formData.category ? parseInt(formData.category) : null,
       quantity: parseInt(formData.quantity) || 0,
-      sale_price: salePrice,
-      currency,
+      sale_price: formData.sale_price || '0',
+      currency: formData.currency,
       unit: formData.unit,
     };
-    if (costPrice > 0) {
-      payload.cost_price = costPrice.toString();
+    if (parseFloat(formData.cost_price) > 0) {
+      payload.cost_price = formData.cost_price;
     }
     return payload;
   };
@@ -274,20 +215,13 @@ const Warehouse = () => {
 
   const openEditModal = (product) => {
     setSelectedProduct(product);
-    const costUzs = parseFloat(product.cost_price_uzs || 0) > 0 ? product.cost_price_uzs
-      : (product.currency === 'uzs' && parseFloat(product.cost_price || 0) > 0 ? product.cost_price : '');
-    const costUsd = parseFloat(product.cost_price_usd || 0) > 0 ? product.cost_price_usd
-      : (product.currency === 'usd' && parseFloat(product.cost_price || 0) > 0 ? product.cost_price : '');
     setFormData({
       name: product.name || '',
       category: product.category?.toString() || '',
       quantity: product.quantity?.toString() || '0',
-      sale_price_uzs: parseFloat(product.sale_price_uzs || 0) > 0 ? product.sale_price_uzs
-        : (product.currency === 'uzs' && parseFloat(product.sale_price || 0) > 0 ? product.sale_price : ''),
-      sale_price_usd: parseFloat(product.sale_price_usd || 0) > 0 ? product.sale_price_usd
-        : (product.currency === 'usd' && parseFloat(product.sale_price || 0) > 0 ? product.sale_price : ''),
-      cost_price_uzs: costUzs,
-      cost_price_usd: costUsd,
+      sale_price: product.sale_price || '',
+      cost_price: product.cost_price || '',
+      currency: product.currency || 'uzs',
       unit: product.unit || 'dona',
     });
     setShowEditModal(true);
@@ -299,7 +233,7 @@ const Warehouse = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', quantity: '', sale_price_uzs: '', sale_price_usd: '', cost_price_uzs: '', cost_price_usd: '', unit: 'dona' });
+    setFormData({ name: '', category: '', quantity: '', sale_price: '', cost_price: '', currency: 'uzs', unit: 'dona' });
     setSelectedProduct(null);
   };
 
@@ -514,7 +448,7 @@ const Warehouse = () => {
                 <FiX className="w-4 h-4" />
               </button>
             </div>
-            <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleAddProduct} submitLabel="Saqlash" isPending={createProductMutation.isPending} usdRate={usdRate} rateLoading={rateLoading} />
+            <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleAddProduct} submitLabel="Saqlash" isPending={createProductMutation.isPending} />
           </div>
         </div>
       )}
@@ -535,7 +469,7 @@ const Warehouse = () => {
                 <p className="text-sm">Ma'lumotlar yuklanmoqda...</p>
               </div>
             ) : (
-              <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleEditProduct} submitLabel="Yangilash" isPending={updateProductMutation.isPending} usdRate={usdRate} rateLoading={rateLoading} />
+              <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleEditProduct} submitLabel="Yangilash" isPending={updateProductMutation.isPending} />
             )}
           </div>
         </div>

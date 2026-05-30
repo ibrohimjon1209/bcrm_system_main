@@ -7,7 +7,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useDashboardStats } from '../hooks/useReports';
 import { useLowStockProducts, useProducts } from '../hooks/useProducts';
-import { useSales } from '../hooks/useSales';
+import { useSales, useOverdueSales } from '../hooks/useSales';
 import { useDebtors } from '../hooks/useCustomers';
 
 const Home = () => {
@@ -17,20 +17,21 @@ const Home = () => {
   const { data: productsData } = useProducts({});
   const totalProductsCount = productsData?.count || 0;
   const { data: recentSalesData, isLoading: salesLoading } = useSales({});
+  const { data: overdueSalesData } = useOverdueSales();
+  const overdueCount = overdueSalesData?.results?.length ?? overdueSalesData?.count ?? 0;
   const { data: debtorsData = [] } = useDebtors();
   const debtorsCount = Array.isArray(debtorsData) ? debtorsData.length : (debtorsData?.results?.length || debtorsData?.count || 0);
 
   const recentSales = (recentSalesData?.results || []).slice(0, 5);
 
-  const revUZS = parseFloat(stats?.revenue_by_currency?.UZS ?? stats?.revenue ?? 0);
-  const revUSD = parseFloat(stats?.revenue_by_currency?.USD ?? 0);
-  const profUZS = parseFloat(stats?.profit_by_currency?.UZS ?? stats?.profit ?? 0);
-  const profUSD = parseFloat(stats?.profit_by_currency?.USD ?? 0);
+  const revUZS  = parseFloat(stats?.revenue_uzs ?? 0);
+  const revUSD  = parseFloat(stats?.revenue_usd ?? 0);
+  const profUZS = parseFloat(stats?.profit_uzs  ?? 0);
 
-  const chartData = stats?.daily_chart?.map(item => ({
-    name: item.date,
-    value: item.amount
-  })) || [];
+  const chartData = (stats?.daily_sales || []).map(item => ({
+    name:  item.date,
+    value: parseFloat(item.amount_uzs || 0) + parseFloat(item.amount_usd || 0),
+  }));
 
   const today = new Date().toLocaleDateString('uz-UZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -70,9 +71,10 @@ const Home = () => {
               className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center text-white relative hover:bg-white/20 transition-colors"
             >
               <FiBell className="w-5 h-5" />
-              {lowStockProducts.length > 0 && lowStockProducts.length !== parseInt(localStorage.getItem('lastSeenLowStockCount') ?? '-1') && (
+              {(lowStockProducts.length > 0 && lowStockProducts.length !== parseInt(localStorage.getItem('lastSeenLowStockCount') ?? '-1')) ||
+               (overdueCount > 0 && overdueCount !== parseInt(localStorage.getItem('lastSeenOverdueCount') ?? '-1')) ? (
                 <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-400 rounded-full border-2 border-[#1447E6]" />
-              )}
+              ) : null}
             </button>
           </div>
 
@@ -90,7 +92,6 @@ const Home = () => {
               <div className="col-span-2 md:col-span-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 md:p-4 border border-white/20">
                 <p className="text-blue-200 text-[10px] font-semibold uppercase tracking-widest mb-1">Foyda</p>
                 <p className="text-white text-base md:text-lg font-black leading-tight">{profUZS.toLocaleString()} so'm</p>
-                <p className="text-blue-200 text-sm font-bold mt-0.5">{profUSD.toLocaleString()} $</p>
               </div>
             </Link>
             

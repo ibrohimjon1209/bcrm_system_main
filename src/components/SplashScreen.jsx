@@ -24,9 +24,10 @@ const SplashScreen = ({ onDone }) => {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-center"
+            className="text-center flex flex-col items-center"
           >
-            <p className="text-white text-2xl font-black tracking-tight">Balon Market</p>
+            <img src="/bcrm_logo.png" alt="logo" className="w-32 h-32 object-contain mb-3" />
+            <p className="text-white text-2xl font-black tracking-tight">Balon Center</p>
             <p className="text-blue-200 text-sm mt-1 font-medium">CRM Tizimi</p>
           </motion.div>
 

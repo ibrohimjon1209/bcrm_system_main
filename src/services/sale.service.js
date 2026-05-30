@@ -53,6 +53,15 @@ const saleService = {
    */
   deleteSale: async (id) => {
     await api.delete(`/api/sales/${id}/`);
+  },
+
+  /**
+   * Get overdue sales (is_overdue=true)
+   * @returns {Promise<PaginatedResponse<Sale>>}
+   */
+  getOverdueSales: async () => {
+    const response = await api.get('/api/sales/', { params: { is_overdue: true } });
+    return response.data;
   }
 };
 

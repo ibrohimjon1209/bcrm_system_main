@@ -4,8 +4,8 @@ import {
   FiTrendingUp, FiDollarSign, FiShoppingCart, FiCreditCard,
   FiPackage, FiBarChart2, FiLoader, FiUsers, FiAlertCircle
 } from 'react-icons/fi';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useDashboardStats, useProfitReport, useWarehouseReport } from '../hooks/useReports';
-import { useSales } from '../hooks/useSales';
 import { useDebtors } from '../hooks/useCustomers';
 import { useProducts, useLowStockProducts } from '../hooks/useProducts';
 
@@ -60,43 +60,33 @@ const Reports = () => {
   const { data: warehouseData, isLoading: warehouseLoading, isError: warehouseError } =
     useWarehouseReport();
 
-  // ── Fallback sources (used when dedicated endpoints fail) ──
-  const { data: salesData }        = useSales({});
   const { data: debtorsRaw = [] }  = useDebtors();
-  const { data: allProductsData, isLoading: productsLoading } =
-    useProducts({ limit: 1000 });
+  const { data: allProductsData, isLoading: productsLoading } = useProducts({ limit: 1000 });
   const { data: lowStockProducts = [] } = useLowStockProducts();
 
-  const debtors = Array.isArray(debtorsRaw) ? debtorsRaw : (debtorsRaw?.results || []);
-  const totalDebt = debtors.reduce((s, c) => s + parseFloat(c.debt_uzs || 0), 0);
-
+  const debtors    = Array.isArray(debtorsRaw) ? debtorsRaw : (debtorsRaw?.results || []);
   const allProducts = allProductsData?.results || [];
-  const computedWarehouse = useMemo(() => ({
-    total:     allProductsData?.count || allProducts.length,
-    quantity:  allProducts.reduce((s, p) => s + parseFloat(p.quantity   || 0), 0),
-    costValue: allProducts.reduce((s, p) => s + parseFloat(p.cost_currency !== 'USD' ? p.cost_price || 0 : 0) * parseFloat(p.quantity || 0), 0),
-  }), [allProducts, allProductsData]);
 
-  // Prefer dedicated endpoint data, fall back to computed
   const wh = warehouseError ? null : warehouseData;
-  const totalProducts  = wh?.total_products ?? computedWarehouse.total;
-  const totalQty       = wh?.total_quantity ?? computedWarehouse.quantity;
-  const totalValUZS    = parseFloat(wh?.total_value_uzs ?? wh?.total_value ?? computedWarehouse.costValue);
-  const totalValUSD    = parseFloat(wh?.total_value_usd ?? 0);
-  const lowStockList   = wh?.low_stock?.length ? wh.low_stock : (wh?.low_stock_products?.length ? wh.low_stock_products : lowStockProducts);
+  const totalProducts = wh?.total_products ?? (allProductsData?.count || allProducts.length);
+  const totalQty      = wh?.total_quantity  ?? allProducts.reduce((s, p) => s + parseFloat(p.quantity || 0), 0);
+  const totalValUZS   = parseFloat(wh?.total_value_uzs ?? wh?.total_value ?? 0);
+  const totalValUSD   = parseFloat(wh?.total_value_usd ?? 0);
+  const lowStockList  = wh?.low_stock?.length ? wh.low_stock : lowStockProducts;
   const warehouseSpinning = warehouseLoading && productsLoading;
 
-  // Dashboard: prefer /reports/dashboard/, fall back to profit+sales+debtors
-  const revenue     = dashError ? null : (dashStats?.total_revenue ?? dashStats?.revenue);
-  const profit      = dashError ? null : (dashStats?.total_profit  ?? dashStats?.profit);
-  const salesCount  = dashStats?.sales_count ?? dashStats?.total_sales_count ?? salesData?.count ?? 0;
-
-  const revUZS  = parseFloat(dashStats?.revenue_by_currency?.UZS ?? revenue ?? 0);
-  const revUSD  = parseFloat(dashStats?.revenue_by_currency?.USD ?? 0);
-  const profUZS = parseFloat(dashStats?.profit_by_currency?.UZS  ?? profit  ?? 0);
-  const profUSD = parseFloat(dashStats?.profit_by_currency?.USD  ?? 0);
-  const debtUZS = parseFloat(dashStats?.debt_by_currency?.UZS ?? dashStats?.debt_uzs ?? totalDebt);
-  const debtUSD = parseFloat(dashStats?.debt_by_currency?.USD ?? dashStats?.debt_usd ?? 0);
+  // Dashboard stats — new field names
+  const revUZS    = parseFloat(dashStats?.revenue_uzs ?? 0);
+  const revUSD    = parseFloat(dashStats?.revenue_usd ?? 0);
+  const profUZS   = parseFloat(dashStats?.profit_uzs  ?? 0);
+  const debtUZS   = parseFloat(dashStats?.debt_uzs    ?? 0);
+  const debtUSD   = parseFloat(dashStats?.debt_usd    ?? 0);
+  const salesCount = dashStats?.sales_count ?? 0;
+  const chartData  = (dashStats?.daily_sales || []).map(d => ({
+    name: d.date,
+    'so\'m': parseFloat(d.amount_uzs || 0),
+    '$':    parseFloat(d.amount_usd  || 0),
+  }));
 
   const tabs = [
     { id: 'dashboard', label: 'Umumiy'  },
@@ -155,59 +145,88 @@ const Reports = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
                 icon={FiDollarSign} bg="bg-blue-50" color="text-[#1447E6]"
-                title="Umumiy Tushum"
-                value={revenue != null ? `${fmt(revUZS)} so'm` : '—'}
-                valueUSD={revUSD}
+                title="Tushum (so'm)"
+                value={`${fmt(revUZS)} so'm`}
                 sub={dashPeriod}
                 loading={dashLoading}
               />
               <StatCard
-                icon={FiTrendingUp} bg="bg-emerald-50" color="text-emerald-600"
+                icon={FiDollarSign} bg="bg-emerald-50" color="text-emerald-600"
+                title="Tushum ($)"
+                value={`$${fmt(revUSD)}`}
+                sub={dashPeriod}
+                loading={dashLoading}
+              />
+              <StatCard
+                icon={FiTrendingUp} bg="bg-teal-50" color="text-teal-600"
                 title="Sof Foyda"
-                value={profit != null ? `${fmt(profUZS)} so'm` : '—'}
-                valueUSD={profUSD}
+                value={`${fmt(profUZS)} so'm`}
                 sub={dashPeriod}
                 loading={dashLoading}
               />
               <StatCard
                 icon={FiShoppingCart} bg="bg-purple-50" color="text-purple-600"
-                title="Sotuvlar Soni"
+                title="Sotuvlar"
                 value={salesCount}
                 sub="ta sotuv"
                 loading={dashLoading}
               />
               <StatCard
                 icon={FiCreditCard} bg="bg-orange-50" color="text-orange-600"
-                title="Umumiy Qarz"
+                title="Qarz (so'm)"
                 value={`${fmt(debtUZS)} so'm`}
-                valueUSD={debtUSD}
                 sub={`${debtors.length} ta qarzdor`}
-                loading={false}
+                loading={dashLoading}
+              />
+              <StatCard
+                icon={FiCreditCard} bg="bg-red-50" color="text-red-500"
+                title="Qarz ($)"
+                value={`$${fmt(debtUSD)}`}
+                sub={`${debtors.length} ta qarzdor`}
+                loading={dashLoading}
               />
             </div>
 
-            {/* Revenue breakdown bar */}
-            {!dashLoading && (revenue != null || profit != null) && (
+            {/* Daily sales chart */}
+            {!dashLoading && chartData.length > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Tushum vs Xarajat</h3>
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Kunlik sotuv grafigi</h3>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 600 }} />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: 11 }} />
+                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                      <Line type="monotone" dataKey="so'm" stroke="#1447E6" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="$" stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Revenue vs Profit bar */}
+            {!dashLoading && (revUZS > 0 || profUZS > 0) && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Tushum vs Foyda</h3>
                 <div className="space-y-3">
                   {[
-                    { label: 'Tushum', uzs: revUZS,  usd: revUSD,  color: 'bg-[#1447E6]',   text: 'text-[#1447E6]'   },
-                    { label: 'Foyda',  uzs: profUZS, usd: profUSD, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                    { label: 'Tushum (so\'m)', val: revUZS,  color: 'bg-[#1447E6]',   text: 'text-[#1447E6]',   max: revUZS  },
+                    { label: 'Tushum ($)',      val: revUSD,  color: 'bg-emerald-500', text: 'text-emerald-600', max: revUSD  },
+                    { label: 'Foyda (so\'m)',   val: profUZS, color: 'bg-teal-500',    text: 'text-teal-600',    max: revUZS  },
                   ].map((row, i) => {
-                    const max = revUZS || 1;
-                    const pct = Math.min(100, (row.uzs / max) * 100);
+                    const pct = Math.min(100, row.val > 0 && row.max > 0 ? (row.val / row.max) * 100 : 0);
                     return (
                       <div key={i}>
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs font-semibold text-gray-600">{row.label}</span>
-                          <div className="text-right">
-                            <span className={`text-xs font-black ${row.text}`}>{fmt(row.uzs)} so'm</span>
-                            {row.usd > 0 && <span className="text-xs font-bold text-gray-400 ml-2">{fmt(row.usd)} $</span>}
-                          </div>
+                          <span className={`text-xs font-black ${row.text}`}>
+                            {i === 1 ? `$${fmt(row.val)}` : `${fmt(row.val)} so'm`}
+                          </span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div className={`${row.color} h-2 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                        <div className="w-full bg-gray-100 rounded-full h-1.5">
+                          <div className={`${row.color} h-1.5 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
                     );
@@ -236,7 +255,9 @@ const Reports = () => {
                         <p className="text-xs font-semibold text-gray-800 truncate">{p.name}</p>
                         <p className="text-[10px] text-gray-400">{p.quantity} dona</p>
                       </div>
-                      <p className="text-xs font-black text-gray-900 shrink-0">{fmt(p.revenue)} so'm</p>
+                      <p className={`text-xs font-black shrink-0 ${p.currency === 'usd' ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                        {p.currency === 'usd' ? `$${fmt(p.revenue)}` : `${fmt(p.revenue)} so'm`}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -265,7 +286,10 @@ const Reports = () => {
                         <p className="text-xs font-semibold text-gray-800 truncate">{c.name}</p>
                         <p className="text-[10px] text-gray-400">{c.orders} ta buyurtma</p>
                       </div>
-                      <p className="text-xs font-black text-gray-900 shrink-0">{fmt(c.spent)} so'm</p>
+                      <div className="text-right shrink-0">
+                        {parseFloat(c.spent_uzs || 0) > 0 && <p className="text-xs font-black text-[#1447E6]">{fmt(c.spent_uzs)} so'm</p>}
+                        {parseFloat(c.spent_usd || 0) > 0 && <p className="text-xs font-black text-emerald-600">${fmt(c.spent_usd)}</p>}
+                      </div>
                     </div>
                   ))}
                 </div>

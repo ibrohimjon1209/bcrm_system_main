@@ -1,15 +1,147 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   FiSearch, FiPlus, FiMinus, FiX, FiCheck, FiSend, FiShare2,
   FiArrowLeft, FiPackage, FiLoader, FiShoppingCart, FiUser,
-  FiChevronLeft, FiChevronRight
+  FiChevronLeft, FiChevronRight, FiEdit2, FiTrash2
 } from 'react-icons/fi';
 import { useProductsForSale } from '../hooks/useProducts';
 import { useCustomers, useCreateCustomer } from '../hooks/useCustomers';
-import { useCreateSale } from '../hooks/useSales';
+import { useCreateSale, useSales, useSale, useUpdateSale, useDeleteSale } from '../hooks/useSales';
 import { toast } from 'react-toastify';
 import { AddEditCustomerModal } from './Customers';
 import { AnimatePresence } from 'framer-motion';
+
+const ITEM_H = 52;
+const UZ_MONTHS = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+const WheelCol = ({ items, value, onChange }) => {
+  const ref = useRef(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const timerRef = useRef(null);
+  const initIdx = items.findIndex(i => i.value === value);
+  const [activeIdx, setActiveIdx] = useState(initIdx >= 0 ? initIdx : 0);
+
+  useLayoutEffect(() => {
+    const idx = items.findIndex(i => i.value === value);
+    if (ref.current) ref.current.scrollTop = (idx >= 0 ? idx : 0) * ITEM_H;
+  }, []);
+
+  useEffect(() => {
+    const idx = items.findIndex(i => i.value === value);
+    if (idx < 0 && ref.current && items.length) {
+      const last = items.length - 1;
+      ref.current.scrollTop = last * ITEM_H;
+      setActiveIdx(last);
+      onChangeRef.current(items[last].value);
+    }
+  }, [items.length]);
+
+  const handleScroll = () => {
+    if (!ref.current) return;
+    const idx = Math.round(ref.current.scrollTop / ITEM_H);
+    const clamped = Math.max(0, Math.min(idx, items.length - 1));
+    setActiveIdx(clamped);
+
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (!ref.current) return;
+      ref.current.scrollTo({ top: clamped * ITEM_H, behavior: 'smooth' });
+      onChangeRef.current(items[clamped].value);
+    }, 120);
+  };
+
+  return (
+    <div className="relative flex-1 overflow-hidden" style={{ height: ITEM_H * 5 }}>
+      {/* top fade */}
+      <div className="absolute inset-x-0 top-0 z-10 pointer-events-none"
+        style={{ height: ITEM_H * 2, background: 'linear-gradient(to bottom, rgba(255,255,255,1) 30%, rgba(255,255,255,0) 100%)' }} />
+      {/* bottom fade */}
+      <div className="absolute inset-x-0 bottom-0 z-10 pointer-events-none"
+        style={{ height: ITEM_H * 2, background: 'linear-gradient(to top, rgba(255,255,255,1) 30%, rgba(255,255,255,0) 100%)' }} />
+      {/* center box */}
+      <div className="absolute inset-x-1 z-1 pointer-events-none rounded-2xl"
+        style={{
+          top: ITEM_H * 2,
+          height: ITEM_H,
+          zIndex: 1,
+          background: 'rgba(243,244,246,0.9)',
+          border: '1px solid rgba(0,0,0,0.08)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 4px rgba(0,0,0,0.06)',
+        }} />
+      <div
+        ref={ref}
+        onScroll={handleScroll}
+        className="h-full overflow-y-scroll wheel-col-inner"
+        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <div style={{ height: ITEM_H * 2 }} />
+        {items.map((item, idx) => {
+          const isSelected = idx === activeIdx;
+          return (
+            <div
+              key={item.value}
+              style={{
+                height: ITEM_H,
+                scrollSnapAlign: 'center',
+                transition: 'transform 0.25s ease, opacity 0.25s ease, color 0.25s ease, font-size 0.25s ease',
+                transform: isSelected ? 'scaleY(1.15)' : 'scaleY(1)',
+                opacity: isSelected ? 1 : 0.4,
+                color: isSelected ? '#000000' : '#9ca3af',
+                fontWeight: 500,
+                fontSize: '1rem',
+                position: 'relative',
+                zIndex: 2,
+              }}
+              className="flex items-center justify-center select-none"
+            >
+              {item.label}
+            </div>
+          );
+        })}
+        <div style={{ height: ITEM_H * 2 }} />
+      </div>
+    </div>
+  );
+};
+
+const WheelDatePicker = ({ value, onChange }) => {
+  const today = new Date();
+  const parseVal = (v) => {
+    if (!v) return { d: today.getDate(), m: today.getMonth() + 1, y: today.getFullYear() };
+    const [y, mo, d] = v.split('-').map(Number);
+    return { d, m: mo, y };
+  };
+  const init = parseVal(value);
+  const [day, setDay] = useState(init.d);
+  const [month, setMonth] = useState(init.m);
+  const [year, setYear] = useState(init.y);
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => ({ value: i + 1, label: String(i + 1).padStart(2, '0') }));
+  const months = UZ_MONTHS.map((name, i) => ({ value: i + 1, label: name }));
+  const years = Array.from({ length: 5 }, (_, i) => ({ value: today.getFullYear() + i, label: String(today.getFullYear() + i) }));
+
+  useEffect(() => {
+    const d = Math.min(day, daysInMonth);
+    onChange(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  }, [day, month, year]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 px-1">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kun</span>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Oy</span>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Yil</span>
+      </div>
+      <div className="flex gap-2">
+        <WheelCol items={days} value={Math.min(day, daysInMonth)} onChange={setDay} />
+        <WheelCol items={months} value={month} onChange={setMonth} />
+        <WheelCol items={years} value={year} onChange={setYear} />
+      </div>
+    </div>
+  );
+};
 
 const Sales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -25,9 +157,22 @@ const Sales = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCreatedSale, setLastCreatedSale] = useState(null);
   const [saleAmounts, setSaleAmounts] = useState({ uzs: 0, usd: 0 });
+  const [saleCart, setSaleCart] = useState([]);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [debtDueDate, setDebtDueDate] = useState('');
+  const [debtNote, setDebtNote] = useState('');
+  const [showDebtModal, setShowDebtModal] = useState(false);
   const [usdRate, setUsdRate] = useState(12800);
   const [rateLoading, setRateLoading] = useState(true);
+
+  // History
+  const [historyPage, setHistoryPage] = useState(1);
+  const [allHistorySales, setAllHistorySales] = useState([]);
+  const [selectedSaleId, setSelectedSaleId] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditSaleModal, setShowEditSaleModal] = useState(false);
+  const [showDeleteSaleModal, setShowDeleteSaleModal] = useState(false);
+  const [editSaleData, setEditSaleData] = useState({ payment_method: 'cash', note: '', debt_due_date: '' });
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/USD')
@@ -44,6 +189,25 @@ const Sales = () => {
   const { data: customersData } = useCustomers();
   const createSaleMutation = useCreateSale();
   const createCustomerMutation = useCreateCustomer();
+  const updateSaleMutation = useUpdateSale();
+  const deleteSaleMutation = useDeleteSale();
+
+  const { data: historyData, isLoading: historyLoading, isFetching: historyFetching } = useSales({ page: historyPage, page_size: 5, ordering: '-created_at' });
+  const { data: saleDetail, isLoading: detailLoading } = useSale(selectedSaleId);
+  const historyTotal = historyData?.count || 0;
+  const hasMoreHistory = allHistorySales.length < historyTotal;
+
+  useEffect(() => {
+    if (!historyData?.results) return;
+    setAllHistorySales(prev => historyPage === 1 ? historyData.results : [...prev, ...historyData.results]);
+  }, [historyData]);
+
+  const PM_LABELS = { cash: 'Naqd', debt: 'Nasiya', card: 'Karta' };
+  const PM_COLORS = {
+    cash: 'bg-emerald-50 text-emerald-700',
+    debt: 'bg-orange-50 text-orange-700',
+    card: 'bg-blue-50 text-blue-700',
+  };
 
   useEffect(() => { setProductPage(1); }, [searchTerm]);
 
@@ -149,38 +313,48 @@ const Sales = () => {
       toast.error('Mijozni tanlang');
       return;
     }
+    if (paymentType !== 'debt' && ((cartHasUzs && !customUzs) || (cartHasUsd && !customUsd))) {
+      toast.error('To\'lov summasini kiriting');
+      return;
+    }
 
     const defaultUzs = getTotalUzs();
     const defaultUsd = getTotalUsd();
-    
-    let scale = 1;
-    if (hasCustomAmount) {
-      if (selectedCurrency === 'UZS' && defaultUzs > 0) {
-        scale = customAmountValue / defaultUzs;
-      } else if (selectedCurrency === 'USD' && defaultUsd > 0) {
-        scale = customAmountValue / defaultUsd;
-      }
-    }
+
+    const uzsScale = cartHasUzs && customUzsAmount > 0 && defaultUzs > 0 ? customUzsAmount / defaultUzs : 1;
+    const usdScale = cartHasUsd && customUsdAmount > 0 && defaultUsd > 0 ? customUsdAmount / defaultUsd : 1;
 
     const payload = {
       customer: selectedCustomer.id,
       payment_method: paymentType,
+      ...(paymentType === 'debt' ? { ...(debtDueDate ? { debt_due_date: debtDueDate } : {}), ...(debtNote ? { note: debtNote } : {}) } : {}),
       items: cart.map(item => {
-        const basePrice = selectedCurrency === 'USD' ? (item.price_usd || 0) : (item.price_uzs || 0);
+        const isUsdItem = item.price_usd > 0;
+        const basePrice = isUsdItem ? item.price_usd : item.price_uzs;
+        const scale = paymentType === 'debt' ? 1 : (isUsdItem ? usdScale : uzsScale);
         return {
           product: item.id,
           quantity: item.quantity,
-          price: (basePrice * scale).toFixed(2)
+          price: (basePrice * scale).toFixed(2),
+          currency: isUsdItem ? 'usd' : 'uzs',
         };
       })
     };
     try {
       const result = await createSaleMutation.mutateAsync(payload);
+      setHistoryPage(1);
+      setAllHistorySales([]);
+      setSaleCart([...cart]);
       setLastCreatedSale(result);
-      setSaleAmounts({
-        uzs: selectedCurrency === 'UZS' ? (hasCustomAmount ? customAmountValue : defaultUzs) : 0,
-        usd: selectedCurrency === 'USD' ? (hasCustomAmount ? customAmountValue : defaultUsd) : 0,
-      });
+      setSaleAmounts(
+        paymentType === 'debt'
+          ? { uzs: 0, usd: 0 }
+          : {
+              uzs: customUzsAmount > 0 ? customUzsAmount : defaultUzs,
+              usd: customUsdAmount > 0 ? customUsdAmount : defaultUsd,
+            }
+      );
+      setShowDebtModal(false);
       setShowCompletion(true);
     } catch (error) { }
   };
@@ -199,6 +373,9 @@ const Sales = () => {
     setSelectedCurrency('UZS');
     setCustomAmount('');
     setPaymentType('cash');
+    setDebtDueDate('');
+    setDebtNote('');
+    setShowDebtModal(false);
     setSelectedCustomer(null);
     setLastCreatedSale(null);
     setSaleAmounts({ uzs: 0, usd: 0 });
@@ -221,11 +398,17 @@ const Sales = () => {
               <FiCheck className="w-10 h-10 text-emerald-500" />
             </div>
             <div className="mb-1 space-y-0.5">
-              {saleAmounts.uzs > 0 && (
-                <p className="text-2xl font-black text-[#1447E6]">{saleAmounts.uzs.toLocaleString()} so'm</p>
-              )}
-              {saleAmounts.usd > 0 && (
-                <p className="text-2xl font-black text-emerald-600">${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              {saleAmounts.uzs === 0 && saleAmounts.usd === 0 ? (
+                <p className="text-2xl font-black text-orange-500">Nasiya</p>
+              ) : (
+                <>
+                  {saleAmounts.uzs > 0 && (
+                    <p className="text-2xl font-black text-[#1447E6]">{saleAmounts.uzs.toLocaleString()} so'm</p>
+                  )}
+                  {saleAmounts.usd > 0 && (
+                    <p className="text-2xl font-black text-emerald-600">${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  )}
+                </>
               )}
             </div>
             <p className="text-gray-400 text-sm mb-6">Sotuv muvaffaqiyatli yakunlandi</p>
@@ -275,53 +458,46 @@ const Sales = () => {
               <div className="text-center">Narx</div>
               <div className="text-right">Jami</div>
             </div>
-            {(() => {
-              const isUsd = saleAmounts.usd > 0;
-              return lastCreatedSale?.items?.map((item) => {
-                const price = parseFloat(item.price || 0);
-                return (
-                  <div key={item.id} className="grid grid-cols-4 gap-2 py-1.5 border-b border-gray-50 last:border-0">
-                    <div className="font-medium text-gray-900 text-xs truncate">{item.product_name}</div>
-                    <div className="text-center text-gray-500 text-xs">{item.quantity}</div>
-                    <div className={`text-center text-xs font-semibold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
-                      {isUsd ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${price.toLocaleString()} so'm`}
-                    </div>
-                    <div className={`text-right font-bold text-xs ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
-                      {isUsd ? `$${(price * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${(price * item.quantity).toLocaleString()} so'm`}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
+            {lastCreatedSale?.items?.map((item) => {
+              const price = parseFloat(item.price || 0);
+              const isUsd = item.currency === 'usd';
+              const fmt = (v) => isUsd
+                ? `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : `${v.toLocaleString()} so'm`;
+              return (
+                <div key={item.id} className="grid grid-cols-4 gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                  <div className="font-medium text-gray-900 text-xs truncate">{item.product_name}</div>
+                  <div className="text-center text-gray-500 text-xs">{item.quantity}</div>
+                  <div className={`text-center text-xs font-semibold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>{fmt(price)}</div>
+                  <div className={`text-right font-bold text-xs ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>{fmt(price * item.quantity)}</div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="border-t border-dashed border-gray-200 pt-4 space-y-2 mb-5">
-            <div className="flex justify-between font-bold text-gray-900">
-              <span>Jami:</span>
-              <div className="text-right space-y-0.5">
-                {saleAmounts.uzs > 0 && (
-                  <p className="text-[#1447E6]">{saleAmounts.uzs.toLocaleString()} so'm</p>
-                )}
-                {saleAmounts.usd > 0 && (
-                  <p className="text-emerald-600">${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>To'landi:</span>
-              <div className="text-right space-y-0.5">
-                {saleAmounts.uzs > 0 && (
-                  <p>{saleAmounts.uzs.toLocaleString()} so'm</p>
-                )}
-                {saleAmounts.usd > 0 && (
-                  <p>${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                )}
-              </div>
-            </div>
+            {lastCreatedSale?.payment_method !== 'debt' && (
+              <>
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>Jami:</span>
+                  <div className="text-right space-y-0.5">
+                    {saleAmounts.uzs > 0 && <p className="text-[#1447E6]">{saleAmounts.uzs.toLocaleString()} so'm</p>}
+                    {saleAmounts.usd > 0 && <p className="text-emerald-600">${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
+                  </div>
+                </div>
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>To'landi:</span>
+                  <div className="text-right space-y-0.5">
+                    {saleAmounts.uzs > 0 && <p>{saleAmounts.uzs.toLocaleString()} so'm</p>}
+                    {saleAmounts.usd > 0 && <p>${saleAmounts.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
+                  </div>
+                </div>
+              </>
+            )}
             {parseFloat(lastCreatedSale?.debt_amount || 0) > 0 && (
               <div className="flex justify-between text-sm font-bold text-red-500">
                 <span>Qarz:</span>
-                <span>{parseFloat(lastCreatedSale?.debt_amount || 0).toLocaleString()} {cur}</span>
+                <span>{parseFloat(lastCreatedSale.debt_amount).toLocaleString()} so'm</span>
               </div>
             )}
           </div>
@@ -551,64 +727,45 @@ const Sales = () => {
             </div>
 
             {paymentType !== 'debt' && (
-              <div className="mb-4 space-y-2">
+              <div className="mb-4 space-y-3">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Sotuv narxi
+                  To'lov summasi
                 </label>
-                {cartHasBoth && (
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <button
-                      onClick={() => { setSelectedCurrency('UZS'); setCustomAmount(''); }}
-                      className={`py-2.5 rounded-xl font-bold text-xs transition-all ${selectedCurrency === 'UZS'
-                        ? 'bg-[#1447E6] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
-                    >
-                      so'm
-                    </button>
-                    <button
-                      onClick={() => { setSelectedCurrency('USD'); setCustomAmount(''); }}
-                      className={`py-2.5 rounded-xl font-bold text-xs transition-all ${selectedCurrency === 'USD'
-                        ? 'bg-emerald-500 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
-                    >
-                      $
-                    </button>
+                {cartHasUzs && (
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#1447E6]">so'm</span>
+                    <input
+                      type="number"
+                      placeholder={getTotalUzs() > 0 ? getTotalUzs().toLocaleString() : '0'}
+                      value={customUzs}
+                      onChange={(e) => setCustomUzs(e.target.value)}
+                      className="w-full pl-12 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] font-bold text-sm outline-none"
+                    />
+                    {getTotalUzs() > 0 && (
+                      <button type="button" onClick={() => setCustomUzs(getTotalUzs().toString())}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold bg-[#1447E6]/10 text-[#1447E6] hover:opacity-80">
+                        to'liq
+                      </button>
+                    )}
                   </div>
                 )}
-                <div className="relative">
-                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${selectedCurrency === 'UZS' ? 'text-gray-400' : 'text-emerald-500'}`}>
-                    {selectedCurrency === 'UZS' ? "so'm" : '$'}
-                  </span>
-                  <input
-                    type="number"
-                    placeholder={selectedCurrency === 'UZS' 
-                      ? (getTotalUzs() > 0 ? getTotalUzs().toLocaleString() : '0')
-                      : (getTotalUsd() > 0 ? getTotalUsd().toLocaleString() : '0')
-                    }
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    className={`w-full pl-10 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 ${selectedCurrency === 'UZS' ? 'focus:ring-[#1447E6]/20 focus:border-[#1447E6]' : 'focus:ring-emerald-200 focus:border-emerald-400'} font-bold text-sm outline-none`}
-                  />
-                  {(selectedCurrency === 'UZS' ? getTotalUzs() > 0 : getTotalUsd() > 0) && (
-                    <button
-                      type="button"
-                      onClick={() => setCustomAmount((selectedCurrency === 'UZS' ? getTotalUzs() : getTotalUsd()).toString())}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold hover:opacity-80 transition-colors ${selectedCurrency === 'UZS' ? 'bg-[#1447E6]/10 text-[#1447E6]' : 'bg-emerald-50 text-emerald-600'}`}
-                    >
-                      to'liq
-                    </button>
-                  )}
-                </div>
-                {customAmount !== '' && (
-                  <button
-                    type="button"
-                    onClick={() => setCustomAmount('')}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
-                  >
-                    <FiX className="w-3.5 h-3.5" /> Tozalash
-                  </button>
+                {cartHasUsd && (
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">$</span>
+                    <input
+                      type="number"
+                      placeholder={getTotalUsd() > 0 ? getTotalUsd().toFixed(2) : '0'}
+                      value={customUsd}
+                      onChange={(e) => setCustomUsd(e.target.value)}
+                      className="w-full pl-7 pr-14 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 font-bold text-sm outline-none"
+                    />
+                    {getTotalUsd() > 0 && (
+                      <button type="button" onClick={() => setCustomUsd(getTotalUsd().toString())}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-600 hover:opacity-80">
+                        to'liq
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -616,32 +773,367 @@ const Sales = () => {
             <div className="pt-3 border-t border-gray-100 space-y-1 mb-4">
               <div className="flex justify-between font-bold text-gray-900">
                 <span className="text-sm">Jami:</span>
-                <div className="text-right">
-                  <p className={`text-base ${hasCustomAmount ? 'text-blue-600' : selectedCurrency === 'USD' ? 'text-emerald-600' : ''}`}>
-                    {hasCustomAmount 
-                      ? (selectedCurrency === 'USD' 
-                          ? `$${customAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : `${customAmountValue.toLocaleString()} so'm`)
-                      : (selectedCurrency === 'USD'
-                          ? (getTotalUsd() > 0 ? `$${getTotalUsd().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0')
-                          : (getTotalUzs() > 0 ? `${getTotalUzs().toLocaleString()} so'm` : '0 so\'m'))
-                    }
-                  </p>
+                <div className="text-right space-y-0.5">
+                  {cartHasUzs && (
+                    <p className="text-base text-[#1447E6]">
+                      {(customUzsAmount > 0 ? customUzsAmount : getTotalUzs()).toLocaleString()} so'm
+                    </p>
+                  )}
+                  {cartHasUsd && (
+                    <p className="text-base text-emerald-600">
+                      ${(customUsdAmount > 0 ? customUsdAmount : getTotalUsd()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={handleCompleteSale}
-              disabled={createSaleMutation.isPending || !selectedCustomer}
-              className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {createSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
-              Sotuvni yakunlash
-            </button>
+            {paymentType === 'debt' ? (
+              <button
+                onClick={() => {
+                  if (!selectedCustomer) { toast.error('Mijozni tanlang'); return; }
+                  setShowDebtModal(true);
+                }}
+                disabled={!selectedCustomer}
+                className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <FiSend className="w-4 h-4" />
+                Davom etish
+              </button>
+            ) : (
+              <button
+                onClick={handleCompleteSale}
+                disabled={createSaleMutation.isPending || !selectedCustomer || (cartHasUzs && !customUzs) || (cartHasUsd && !customUsd)}
+                className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {createSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
+                Sotuvni yakunlash
+              </button>
+            )}
           </div>
         )}
       </div>
+      {/* Debt modal */}
+      {showDebtModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end" onClick={() => setShowDebtModal(false)}>
+          <div className="bg-white rounded-t-3xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 pt-5 pb-2 flex items-center justify-between border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">Nasiya ma'lumotlari</h2>
+              <button onClick={() => setShowDebtModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                  Qarz muddati
+                </label>
+                <WheelDatePicker value={debtDueDate} onChange={setDebtDueDate} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                  Izoh (ixtiyoriy)
+                </label>
+                <textarea
+                  value={debtNote}
+                  onChange={(e) => setDebtNote(e.target.value)}
+                  rows={3}
+                  placeholder="Qo'shimcha izoh kiriting..."
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] text-sm outline-none text-gray-900 resize-none"
+                />
+              </div>
+              <button
+                onClick={handleCompleteSale}
+                disabled={createSaleMutation.isPending || !debtDueDate}
+                className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {createSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
+                Sotuvni yakunlash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sales History ── */}
+      <div className="px-4 py-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-gray-900">Sotuvlar tarixi</h2>
+          {historyTotal > 0 && (
+            <span className="text-xs font-bold text-[#1447E6] bg-blue-50 px-2.5 py-1 rounded-xl">{historyTotal} ta</span>
+          )}
+        </div>
+
+        {historyLoading && allHistorySales.length === 0 ? (
+          <div className="flex justify-center py-8 bg-white rounded-2xl border border-gray-100">
+            <FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" />
+          </div>
+        ) : allHistorySales.length === 0 ? (
+          <div className="py-8 text-center bg-white rounded-2xl border border-gray-100">
+            <p className="text-sm text-gray-400">Hali sotuv yo'q</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {allHistorySales.map((sale, idx) => {
+              const uzs = parseFloat(sale.total_uzs || 0);
+              const usd = parseFloat(sale.total_usd || 0);
+              return (
+                <div
+                  key={sale.id}
+                  onClick={() => { setSelectedSaleId(sale.id); setShowDetailModal(true); }}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-gray-50 hover:bg-gray-50 transition-colors ${idx < allHistorySales.length - 1 ? 'border-b border-gray-50' : ''}`}
+                >
+                  <div className="w-9 h-9 bg-blue-50 rounded-full flex items-center justify-center font-bold text-[#1447E6] text-sm shrink-0">
+                    {sale.customer_name?.charAt(0) || 'M'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold text-gray-900 truncate">{sale.customer_name}</p>
+                      {sale.is_overdue && <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-lg shrink-0">Muddati o'tgan</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[10px] text-gray-400">{new Date(sale.created_at).toLocaleDateString('uz-UZ')}</p>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-lg bg-gray-100 text-gray-600">
+                        {sale.payment_method_display}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {uzs > 0 && <p className="text-xs font-bold text-[#1447E6]">{uzs.toLocaleString()} so'm</p>}
+                    {usd > 0 && <p className="text-xs font-bold text-emerald-600">${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {hasMoreHistory && (
+          <button
+            onClick={() => setHistoryPage(p => p + 1)}
+            disabled={historyFetching}
+            className="w-full py-3 bg-white border border-gray-100 rounded-2xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+          >
+            {historyFetching ? <FiLoader className="animate-spin w-4 h-4" /> : null}
+            {historyFetching ? 'Yuklanmoqda...' : `Yana ko'rish (${historyTotal - allHistorySales.length} ta qoldi)`}
+          </button>
+        )}
+      </div>
+
+      {/* ── Detail Modal ── */}
+      {showDetailModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end" onClick={() => setShowDetailModal(false)}>
+          <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900">Sotuv #{saleDetail?.id}</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditSaleData({
+                      payment_method: saleDetail?.payment_method || 'cash',
+                      note: saleDetail?.note || '',
+                      debt_due_date: saleDetail?.debt_due_date || '',
+                    });
+                    setShowEditSaleModal(true);
+                    setShowDetailModal(false);
+                  }}
+                  className="w-8 h-8 bg-blue-50 text-[#1447E6] rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
+                >
+                  <FiEdit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => { setShowDeleteSaleModal(true); setShowDetailModal(false); }}
+                  className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => setShowDetailModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {detailLoading ? (
+              <div className="flex justify-center py-16"><FiLoader className="w-8 h-8 text-[#1447E6] animate-spin" /></div>
+            ) : saleDetail ? (
+              <div className="p-5 space-y-4">
+                {/* Info */}
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-2.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Mijoz</span>
+                    <span className="font-semibold text-gray-900">{saleDetail.customer_name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Sana</span>
+                    <span className="font-semibold text-gray-900">{formatDateTime(saleDetail.created_at)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">To'lov</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ${PM_COLORS[saleDetail.payment_method] || 'bg-gray-100 text-gray-600'}`}>
+                      {PM_LABELS[saleDetail.payment_method] || saleDetail.payment_method}
+                    </span>
+                  </div>
+                  {saleDetail.debt_due_date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Qarz muddati</span>
+                      <span className={`font-semibold ${saleDetail.is_overdue ? 'text-red-500' : 'text-gray-900'}`}>
+                        {new Date(saleDetail.debt_due_date).toLocaleDateString('uz-UZ')}
+                        {saleDetail.is_overdue && ' (muddati o\'tgan)'}
+                      </span>
+                    </div>
+                  )}
+                  {saleDetail.note && (
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-400 shrink-0">Izoh</span>
+                      <span className="font-medium text-gray-700 text-right">{saleDetail.note}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Items */}
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Mahsulotlar</h3>
+                  <div className="bg-gray-50 rounded-2xl overflow-hidden">
+                    <div className="grid grid-cols-4 gap-2 px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                      <div className="col-span-2">Nomi</div>
+                      <div className="text-center">Miqdor</div>
+                      <div className="text-right">Narx</div>
+                    </div>
+                    {(saleDetail.items || []).map((item, i) => {
+                      const price = parseFloat(item.price || 0);
+                      const isUsd = item.currency === 'usd';
+                      const fmtPrice = isUsd
+                        ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `${price.toLocaleString()} so'm`;
+                      return (
+                        <div key={i} className="grid grid-cols-4 gap-2 px-4 py-2.5 border-b border-gray-100 last:border-0 text-sm">
+                          <div className="col-span-2 font-medium text-gray-900 truncate">{item.product_name}</div>
+                          <div className="text-center text-gray-500">{item.quantity}</div>
+                          <div className={`text-right font-bold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>{fmtPrice}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Totals */}
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                  {parseFloat(saleDetail.total_uzs || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Jami (so'm)</span>
+                      <span className="font-bold text-[#1447E6]">{parseFloat(saleDetail.total_uzs).toLocaleString()} so'm</span>
+                    </div>
+                  )}
+                  {parseFloat(saleDetail.total_usd || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Jami ($)</span>
+                      <span className="font-bold text-emerald-600">${parseFloat(saleDetail.total_usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {parseFloat(saleDetail.paid_amount || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">To'langan</span>
+                      <span className="font-bold text-emerald-600">{parseFloat(saleDetail.paid_amount).toLocaleString()} so'm</span>
+                    </div>
+                  )}
+                  {parseFloat(saleDetail.remaining_amount || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Qarz (qolgan)</span>
+                      <span className="font-bold text-red-500">{parseFloat(saleDetail.remaining_amount).toLocaleString()} so'm</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Sale Modal ── */}
+      {showEditSaleModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end" onClick={() => setShowEditSaleModal(false)}>
+          <div className="bg-white rounded-t-3xl w-full" onClick={e => e.stopPropagation()}>
+            <div className="px-5 pt-5 pb-2 flex items-center justify-between border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">Sotuvni tahrirlash</h2>
+              <button onClick={() => setShowEditSaleModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">To'lov turi</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[{ id: 'cash', label: 'Naqd' }, { id: 'debt', label: 'Nasiya' }, { id: 'card', label: 'Karta' }].map(t => (
+                    <button key={t.id}
+                      onClick={() => setEditSaleData(d => ({ ...d, payment_method: t.id }))}
+                      className={`py-2.5 rounded-xl font-bold text-xs transition-all ${editSaleData.payment_method === t.id ? 'bg-[#1447E6] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {editSaleData.payment_method === 'debt' && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Qarz muddati</label>
+                  <input type="date" value={editSaleData.debt_due_date}
+                    onChange={e => setEditSaleData(d => ({ ...d, debt_due_date: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]" />
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Izoh</label>
+                <textarea value={editSaleData.note} onChange={e => setEditSaleData(d => ({ ...d, note: e.target.value }))}
+                  rows={3} placeholder="Izoh..."
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none resize-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]" />
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await updateSaleMutation.mutateAsync({ id: selectedSaleId, data: editSaleData });
+                    setShowEditSaleModal(false);
+                  } catch {}
+                }}
+                disabled={updateSaleMutation.isPending}
+                className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
+                {updateSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
+                Saqlash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirm ── */}
+      {showDeleteSaleModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center px-4" onClick={() => setShowDeleteSaleModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <FiTrash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-1">Sotuvni o'chirish</h3>
+              <p className="text-sm text-gray-500">Bu amalni ortga qaytarib bo'lmaydi.</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteSaleModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm">Bekor</button>
+              <button
+                onClick={async () => {
+                  try {
+                    await deleteSaleMutation.mutateAsync(selectedSaleId);
+                    setShowDeleteSaleModal(false);
+                    setSelectedSaleId(null);
+                  } catch {}
+                }}
+                disabled={deleteSaleMutation.isPending}
+                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-red-600">
+                {deleteSaleMutation.isPending && <FiLoader className="animate-spin w-4 h-4" />}
+                O'chirish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence>
         {isAddCustomerModalOpen && (
           <AddEditCustomerModal

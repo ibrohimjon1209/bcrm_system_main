@@ -131,12 +131,6 @@ const Purchases = () => {
             <h1 className="text-white text-2xl font-bold">Xaridlar</h1>
             <p className="text-blue-200 text-sm mt-0.5">Ombor to'ldirish</p>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="w-10 h-10 bg-white/20 text-white rounded-2xl flex items-center justify-center hover:bg-white/30 transition-colors"
-          >
-            <FiPlus className="w-5 h-5" />
-          </button>
         </div>
       </div>
 

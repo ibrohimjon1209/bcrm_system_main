@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import {
@@ -19,7 +19,7 @@ const statusConfig = {
   inactive: { label: 'Nofaol', border: 'border-l-gray-400', badge: 'bg-gray-50 text-gray-500' },
 };
 
-const hasAnyDebt = (c) => parseFloat(c?.debt || 0) > 0;
+const hasAnyDebt = (c) => parseFloat(c?.debt_uzs || 0) > 0 || parseFloat(c?.debt_usd || 0) > 0;
 
 const getStatusConfig = (customer) => {
   return statusConfig[customer.status] || statusConfig.active;
@@ -30,7 +30,8 @@ const SWIPE_THRESHOLD = 75;
 const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   const sc = getStatusConfig(customer);
   const hasDebt = hasAnyDebt(customer);
-  const debt = parseFloat(customer.debt || 0);
+  const debtUzs = parseFloat(customer.debt_uzs || 0);
+  const debtUsd = parseFloat(customer.debt_usd || 0);
   const x = useMotionValue(0);
 
   const editOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
@@ -109,15 +110,14 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
             </div>
           </div>
 
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 space-y-1">
             {hasDebt ? (
-              <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
-                {debt.toLocaleString()} so'm
-              </span>
+              <>
+                {debtUzs > 0 && <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">{debtUzs.toLocaleString()} so'm</span>}
+                {debtUsd > 0 && <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">${debtUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+              </>
             ) : (
-              <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-xl block">
-                Qarsiz
-              </span>
+              <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-xl block">Qarsiz</span>
             )}
           </div>
         </div>
@@ -129,6 +129,7 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
 const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState('');
+  const [payCurrency, setPayCurrency] = useState('uzs');
   const [showHistory, setShowHistory] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -142,9 +143,11 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   if (!customer) return null;
 
   const detail = customerDetail || customer;
-  const debt = parseFloat(detail.debt || 0);
-  const hasDebt = debt > 0;
-  const totalSpent = parseFloat(detail.total_spent || 0);
+  const debtUZS = parseFloat(detail.debt_uzs || 0);
+  const debtUSD = parseFloat(detail.debt_usd || 0);
+  const hasDebt = debtUZS > 0 || debtUSD > 0;
+  const totalSpentUzs = parseFloat(detail.total_spent_uzs || 0);
+  const totalSpentUsd = parseFloat(detail.total_spent_usd || 0);
   const isLinked = customerDetail?.is_linked ?? false;
   const botLinkLoading = !customerDetail && detailLoading;
   const deepLink = customerDetail?.link_token
@@ -158,7 +161,10 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
       return;
     }
     try {
-      await payDebtMutation.mutateAsync({ id: customer.id, data: { amount: parseFloat(payAmount) } });
+      const payData = payCurrency === 'uzs'
+        ? { amount_uzs: parseFloat(payAmount).toFixed(2), amount_usd: '0.00' }
+        : { amount_uzs: '0.00', amount_usd: parseFloat(payAmount).toFixed(2) };
+      await payDebtMutation.mutateAsync({ id: customer.id, data: payData });
       setShowPayForm(false);
       setPayAmount('');
       onClose();
@@ -240,16 +246,17 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
             <span className="text-xs text-gray-500 block mb-1">Jami xaridlar</span>
-            {totalSpent > 0 ? (
-              <span className="font-bold text-gray-900 text-sm block">{totalSpent.toLocaleString()} so'm</span>
-            ) : (
-              <span className="font-bold text-gray-400 text-sm">0 so'm</span>
-            )}
+            {totalSpentUzs > 0 && <span className="font-bold text-gray-900 text-sm block">{totalSpentUzs.toLocaleString()} so'm</span>}
+            {totalSpentUsd > 0 && <span className="font-bold text-emerald-600 text-sm block">${totalSpentUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+            {!totalSpentUzs && !totalSpentUsd && <span className="font-bold text-gray-400 text-sm">—</span>}
           </div>
           <div className={`rounded-2xl p-4 shadow-sm border text-center ${hasDebt ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
             <span className={`text-xs block mb-1 ${hasDebt ? 'text-red-500' : 'text-blue-600'}`}>Joriy qarz</span>
             {hasDebt ? (
-              <span className="font-bold text-sm text-red-600">{debt.toLocaleString()} so'm</span>
+              <>
+                {debtUZS > 0 && <span className="font-bold text-sm text-red-600 block">{debtUZS.toLocaleString()} so'm</span>}
+                {debtUSD > 0 && <span className="font-bold text-sm text-red-600 block">${debtUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+              </>
             ) : (
               <span className="font-bold text-sm text-blue-600">Qarsiz</span>
             )}
@@ -304,7 +311,8 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
                             <p className="text-[10px] text-gray-400 mt-0.5">{new Date(sale.created_at).toLocaleString()}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-black text-[#1447E6]">{parseFloat(sale.total || 0).toLocaleString()} so'm</p>
+                            {parseFloat(sale.total_uzs || 0) > 0 && <p className="text-xs font-black text-[#1447E6]">{parseFloat(sale.total_uzs).toLocaleString()} so'm</p>}
+                            {parseFloat(sale.total_usd || 0) > 0 && <p className="text-xs font-black text-emerald-600">${parseFloat(sale.total_usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
                             <p className="text-[9px] font-bold text-gray-500">{sale.payment_method_display}</p>
                           </div>
                         </div>
@@ -397,9 +405,21 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
           <div>
             {showPayForm ? (
               <form onSubmit={handlePayDebt} className="bg-red-50 rounded-2xl p-4 space-y-3 border border-red-100">
+                {(debtUZS > 0 && debtUSD > 0) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => { setPayCurrency('uzs'); setPayAmount(''); }}
+                      className={`py-2 rounded-xl font-bold text-xs transition-all ${payCurrency === 'uzs' ? 'bg-red-500 text-white' : 'bg-white text-red-500 border border-red-200'}`}>
+                      so'm
+                    </button>
+                    <button type="button" onClick={() => { setPayCurrency('usd'); setPayAmount(''); }}
+                      className={`py-2 rounded-xl font-bold text-xs transition-all ${payCurrency === 'usd' ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-600 border border-emerald-200'}`}>
+                      $ (USD)
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-red-600">
-                    Qarz: {debt.toLocaleString()} so'm
+                    Qarz: {payCurrency === 'uzs' ? `${debtUZS.toLocaleString()} so'm` : `$${debtUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -407,13 +427,13 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
                     type="number"
                     value={payAmount}
                     onChange={e => setPayAmount(e.target.value)}
-                    placeholder="Miqdor (so'm)"
-                    max={debt}
+                    placeholder={payCurrency === 'uzs' ? "Miqdor (so'm)" : 'Miqdor ($)'}
+                    max={payCurrency === 'uzs' ? debtUZS : debtUSD}
                     className="flex-1 bg-white border border-red-200 rounded-xl py-3 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-300"
                   />
                   <button
                     type="button"
-                    onClick={() => setPayAmount(debt.toString())}
+                    onClick={() => setPayAmount((payCurrency === 'uzs' ? debtUZS : debtUSD).toString())}
                     className="px-3 bg-red-100 text-red-600 rounded-xl text-xs font-bold whitespace-nowrap border border-red-200 hover:bg-red-200 transition-colors"
                   >
                     To'liq
@@ -441,7 +461,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => {
-                    setPayCurrency(debtUZS > 0 ? 'UZS' : 'USD');
+                    setPayCurrency(debtUZS > 0 ? 'uzs' : 'usd');
                     setShowPayForm(true);
                   }}
                   className="bg-emerald-600 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm"
@@ -470,7 +490,8 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
     name: initialData?.name || '',
     phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',
     address: initialData?.address || '',
-    debt: initialData?.debt || 0,
+    debt_uzs: initialData?.debt_uzs || '',
+    debt_usd: initialData?.debt_usd || '',
     status: initialData?.status || 'active',
     note: initialData?.note || '',
   });
@@ -557,16 +578,29 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
               <option value="inactive">Nofaol</option>
             </select>
           </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
-            <input
-              name="debt"
-              value={formData.debt}
-              onChange={e => setFormData({ ...formData, debt: e.target.value })}
-              type="number"
-              className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
-              placeholder="0"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
+              <input
+                name="debt_uzs"
+                value={formData.debt_uzs}
+                onChange={e => setFormData({ ...formData, debt_uzs: e.target.value })}
+                type="number"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz ($)</label>
+              <input
+                name="debt_usd"
+                value={formData.debt_usd}
+                onChange={e => setFormData({ ...formData, debt_usd: e.target.value })}
+                type="number"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                placeholder="0"
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 block mb-1.5">Eslatma (Note)</label>
@@ -595,7 +629,7 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
 const Customers = () => {
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState(location.state?.filter || 'Barchasi');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(location.state?.openCustomerName || '');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState(null);
@@ -621,6 +655,13 @@ const Customers = () => {
         c => !searchQuery || c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || c.phone?.includes(searchQuery)
       )
     : customersData?.results || [];
+  useEffect(() => {
+    const name = location.state?.openCustomerName;
+    if (!name || selectedCustomer) return;
+    const found = customerList.find(c => c.name === name);
+    if (found) setSelectedCustomer(found);
+  }, [customerList, location.state?.openCustomerName]);
+
   const createCustomerMutation = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomerMutation = useDeleteCustomer();

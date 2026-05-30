@@ -102,6 +102,7 @@ export const usePayDebt = () => {
     onSuccess: (_, variables) => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
       queryClient.refetchQueries({ queryKey: ['customer', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['reports', 'dashboard'] });
       toast.success("Qarz to'lovi muvaffaqiyatli amalga oshirildi");
     },
     onError: (err) => toast.error(getErrorMsg(err)),

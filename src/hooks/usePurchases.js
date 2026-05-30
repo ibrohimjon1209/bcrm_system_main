@@ -28,6 +28,9 @@ const getErrMsg = (err) => {
   return Array.isArray(first) ? first[0] : (first || 'Xatolik yuz berdi');
 };
 
+const invalidateDashboard = (qc) =>
+  qc.invalidateQueries({ queryKey: ['reports', 'dashboard'] });
+
 export const useCreatePurchase = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -35,6 +38,7 @@ export const useCreatePurchase = () => {
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['purchases'] });
       queryClient.refetchQueries({ queryKey: ['products'] });
+      invalidateDashboard(queryClient);
       toast.success('Xarid muvaffaqiyatli saqlandi');
     },
     onError: (err) => toast.error(getErrMsg(err)),
@@ -48,6 +52,7 @@ export const useUpdatePurchase = () => {
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['purchases'] });
       queryClient.refetchQueries({ queryKey: ['products'] });
+      invalidateDashboard(queryClient);
       toast.success('Xarid muvaffaqiyatli yangilandi');
     },
     onError: (err) => toast.error(getErrMsg(err)),
@@ -61,6 +66,7 @@ export const useDeletePurchase = () => {
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['purchases'] });
       queryClient.refetchQueries({ queryKey: ['products'] });
+      invalidateDashboard(queryClient);
       toast.success("Xarid muvaffaqiyatli o'chirildi");
     },
     onError: (err) => toast.error(getErrMsg(err)),
