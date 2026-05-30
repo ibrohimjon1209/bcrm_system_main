@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   FiPlus, FiSearch, FiPackage, FiTruck, FiX, FiCheck,
-  FiMinus, FiLoader, FiTrash2, FiEdit
+  FiLoader, FiTrash2, FiEdit
 } from 'react-icons/fi';
 import { useQueries } from '@tanstack/react-query';
 import { usePurchases, usePurchaseDetail, useCreatePurchase, useUpdatePurchase, useDeletePurchase } from '../hooks/usePurchases';
@@ -59,17 +59,10 @@ const Purchases = () => {
         id: product.id,
         name: product.name,
         quantity: 1,
-        costPrice: parseFloat(product.cost_price || 0)
+        costPrice: parseFloat(product.cost_price || 0),
+        currency: product.currency || 'uzs'
       }]);
     }
-  };
-
-  const updateQuantity = (id, delta) => {
-    setCart(
-      cart
-        .map(item => item.id === id ? { ...item, quantity: item.quantity + delta } : item)
-        .filter(item => item.quantity > 0)
-    );
   };
 
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
@@ -87,7 +80,8 @@ const Purchases = () => {
         id: item.product,
         name: item.product_name,
         quantity: item.quantity,
-        costPrice: parseFloat(item.cost_price || 0)
+        costPrice: parseFloat(item.cost_price || 0),
+        currency: item.currency || 'uzs'
       }))
     );
     setNote(purchase.note || '');
@@ -105,8 +99,9 @@ const Purchases = () => {
         await createPurchaseMutation.mutateAsync({
           items: cart.map(item => ({
             product: item.id,
-            quantity: item.quantity,
-            cost_price: parseFloat(item.costPrice || 0).toFixed(2)
+            quantity: parseInt(item.quantity) || 1,
+            cost_price: parseFloat(item.costPrice || 0).toFixed(2),
+            currency: item.currency || 'uzs'
           })),
           note
         });
@@ -295,31 +290,37 @@ const Purchases = () => {
                           </div>
                           {/* Controls row */}
                           <div className="flex items-center gap-2">
-                            {/* Quantity stepper */}
-                            <div className="flex items-center bg-white rounded-lg border border-gray-200 shrink-0">
-                              <button
-                                onClick={() => updateQuantity(item.id, -1)}
-                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-400 transition-colors"
-                              >
-                                <FiMinus className="w-3 h-3" />
-                              </button>
-                              <span className="w-7 text-center font-black text-gray-900 text-sm">{item.quantity}</span>
-                              <button
-                                onClick={() => updateQuantity(item.id, 1)}
-                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#1447E6] transition-colors"
-                              >
-                                <FiPlus className="w-3 h-3" />
-                              </button>
+                            {/* Quantity input */}
+                            <div className="shrink-0 flex flex-col items-center gap-0.5">
+                              <span className="text-[9px] text-gray-400 font-semibold">Soni</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => setCart(cart.map(c => c.id === item.id ? { ...c, quantity: e.target.value } : c))}
+                                onBlur={(e) => {
+                                  const val = parseInt(e.target.value) || 1;
+                                  setCart(cart.map(c => c.id === item.id ? { ...c, quantity: val } : c));
+                                }}
+                                className="w-14 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-black text-center focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] outline-none"
+                              />
                             </div>
                             {/* Cost price input */}
-                            <input
-                              type="number"
-                              value={item.costPrice}
-                              onChange={(e) => setCart(cart.map(c => c.id === item.id ? { ...c, costPrice: e.target.value } : c))}
-                              placeholder="Tan narx"
-                              className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] outline-none"
-                            />
-                            <span className="text-[10px] text-gray-400 shrink-0">so'm</span>
+                            <div className="flex-1 flex flex-col gap-0.5">
+                              <span className="text-[9px] text-gray-400 font-semibold">Tan narx</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={item.costPrice}
+                                  onChange={(e) => setCart(cart.map(c => c.id === item.id ? { ...c, costPrice: e.target.value } : c))}
+                                  placeholder="0"
+                                  className={`flex-1 px-3 py-1.5 bg-white border rounded-lg text-xs font-bold outline-none focus:ring-2 ${item.currency === 'usd' ? 'border-emerald-200 focus:ring-emerald-200 focus:border-emerald-400' : 'border-gray-200 focus:ring-[#1447E6]/20 focus:border-[#1447E6]'}`}
+                                />
+                                <span className={`text-[10px] font-bold shrink-0 ${item.currency === 'usd' ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                  {item.currency === 'usd' ? '$' : "so'm"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
