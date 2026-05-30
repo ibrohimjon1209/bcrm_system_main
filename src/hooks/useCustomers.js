@@ -18,18 +18,11 @@ export const useCustomer = (id) => {
   });
 };
 
+// Fetches customer sales via GET /api/sales/?customer={id}
 export const useCustomerSalesHistory = (id) => {
   return useQuery({
     queryKey: ['customers', id, 'sales-history'],
     queryFn: () => customerService.getCustomerSalesHistory(id),
-    enabled: !!id,
-  });
-};
-
-export const useCustomerMessageHistory = (id) => {
-  return useQuery({
-    queryKey: ['customers', id, 'message-history'],
-    queryFn: () => customerService.getMessageHistory(id),
     enabled: !!id,
   });
 };
@@ -139,18 +132,6 @@ export const useUnlinkTelegram = () => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
       queryClient.refetchQueries({ queryKey: ['customer', id] });
       toast.success("Telegram bog'liqlik bekor qilindi");
-    },
-    onError: (err) => toast.error(getErrorMsg(err)),
-  });
-};
-
-export const useSendMessage = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }) => customerService.sendMessage(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.refetchQueries({ queryKey: ['customers', variables.id, 'message-history'] });
-      toast.success("Xabar muvaffaqiyatli yuborildi!");
     },
     onError: (err) => toast.error(getErrorMsg(err)),
   });

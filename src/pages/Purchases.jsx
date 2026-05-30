@@ -80,23 +80,23 @@ const Purchases = () => {
   };
 
   const handleSave = async () => {
-    if (cart.length === 0) {
+    if (modalMode === 'create' && cart.length === 0) {
       toast.error('Kamida bitta mahsulot tanlang');
       return;
     }
-    const payload = {
-      items: cart.map(item => ({
-        product: item.id,
-        quantity: item.quantity,
-        cost_price: item.costPrice.toString()
-      })),
-      note
-    };
     try {
       if (modalMode === 'create') {
-        await createPurchaseMutation.mutateAsync(payload);
+        await createPurchaseMutation.mutateAsync({
+          items: cart.map(item => ({
+            product: item.id,
+            quantity: item.quantity,
+            cost_price: parseFloat(item.costPrice || 0).toFixed(2)
+          })),
+          note
+        });
       } else {
-        await updatePurchaseMutation.mutateAsync({ id: editPurchaseId, data: payload });
+        // PatchedPurchaseRequest: only note, supplier, payment_method (no items)
+        await updatePurchaseMutation.mutateAsync({ id: editPurchaseId, data: { note } });
       }
       setModalMode(null);
     } catch (_) {}
@@ -157,7 +157,7 @@ const Purchases = () => {
                   <div>
                     <h3 className="font-bold text-gray-900 text-sm">Xarid #{purchase.id}</h3>
                     <p className="text-[10px] text-gray-400 mt-0.5">
-                      {new Date(purchase.created_at).toLocaleDateString()} • {purchase.items?.length || 0} ta mahsulot
+                      {new Date(purchase.created_at).toLocaleDateString()} • {purchase.item_count || 0} ta mahsulot
                     </p>
                   </div>
                 </div>
@@ -299,6 +299,15 @@ const Purchases = () => {
                                 <FiPlus className="w-3 h-3" />
                               </button>
                             </div>
+                            {/* Cost price input */}
+                            <input
+                              type="number"
+                              value={item.costPrice}
+                              onChange={(e) => setCart(cart.map(c => c.id === item.id ? { ...c, costPrice: e.target.value } : c))}
+                              placeholder="Tan narx"
+                              className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] outline-none"
+                            />
+                            <span className="text-[10px] text-gray-400 shrink-0">so'm</span>
                           </div>
                         </div>
                       ))}

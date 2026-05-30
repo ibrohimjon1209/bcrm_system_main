@@ -23,11 +23,11 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
-          console.error('Failed to fetch current user:', error);
-          // If refresh token fails (handled in api.js interceptor), 
-          // it will redirect to login, but we should clean up state here too
-          if (error.response?.status === 401) {
-            logout();
+          // api.js interceptor handles token refresh and redirect automatically.
+          // Only update state here if tokens were already cleared.
+          if (!localStorage.getItem('access_token')) {
+            setUser(null);
+            setIsAuthenticated(false);
           }
         }
       }

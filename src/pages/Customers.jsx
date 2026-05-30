@@ -5,28 +5,24 @@ import {
   FiPlus, FiSearch, FiPhone, FiEdit,
   FiTrash2, FiMessageCircle, FiFileText, FiX, FiCheckCircle,
   FiMapPin, FiCalendar, FiCreditCard, FiLoader, FiUsers,
-  FiChevronDown, FiChevronUp, FiCopy, FiMessageSquare
+  FiChevronDown, FiChevronUp, FiCopy
 } from 'react-icons/fi';
 import { FiSend } from 'react-icons/fi';
-import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCustomerMessageHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useUnlinkTelegram, useSendMessage } from '../hooks/useCustomers';
+import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useUnlinkTelegram } from '../hooks/useCustomers';
 import { toast } from 'react-toastify';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
 const statusConfig = {
-  FAOL: { label: 'Faol', border: 'border-l-blue-500', badge: 'bg-blue-50 text-blue-600' },
-  VIP: { label: 'VIP', border: 'border-l-amber-400', badge: 'bg-amber-50 text-amber-600' },
-  QARZDOR: { label: 'Qarzdor', border: 'border-l-red-500', badge: 'bg-red-50 text-red-600' },
-  NOFAOL: { label: 'Nofaol', border: 'border-l-gray-400', badge: 'bg-gray-50 text-gray-500' },
+  active: { label: 'Faol', border: 'border-l-blue-500', badge: 'bg-blue-50 text-blue-600' },
+  vip: { label: 'VIP', border: 'border-l-amber-400', badge: 'bg-amber-50 text-amber-600' },
+  debtor: { label: 'Qarzdor', border: 'border-l-red-500', badge: 'bg-red-50 text-red-600' },
+  inactive: { label: 'Nofaol', border: 'border-l-gray-400', badge: 'bg-gray-50 text-gray-500' },
 };
 
-const hasAnyDebt = (c) =>
-  parseFloat(c?.debt_uzs || 0) > 0 || parseFloat(c?.debt_usd || 0) > 0;
+const hasAnyDebt = (c) => parseFloat(c?.debt || 0) > 0;
 
 const getStatusConfig = (customer) => {
-  if (customer.status) return statusConfig[customer.status] || statusConfig.FAOL;
-  if (hasAnyDebt(customer)) return statusConfig.QARZDOR;
-  if (customer.is_vip) return statusConfig.VIP;
-  return statusConfig.FAOL;
+  return statusConfig[customer.status] || statusConfig.active;
 };
 
 const SWIPE_THRESHOLD = 75;
@@ -34,8 +30,7 @@ const SWIPE_THRESHOLD = 75;
 const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   const sc = getStatusConfig(customer);
   const hasDebt = hasAnyDebt(customer);
-  const debtUZS = parseFloat(customer.debt_uzs || 0);
-  const debtUSD = parseFloat(customer.debt_usd || 0);
+  const debt = parseFloat(customer.debt || 0);
   const x = useMotionValue(0);
 
   const editOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
@@ -59,7 +54,6 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
 
   return (
     <div className="relative mb-3 overflow-hidden rounded-2xl">
-      {/* Swipe action backgrounds */}
       <div className="absolute inset-0 flex justify-between items-center rounded-2xl pointer-events-none">
         <motion.div
           style={{ opacity: editOpacity }}
@@ -98,16 +92,14 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
         onClick={() => onClick(customer)}
       >
         <div className="flex items-center gap-3 p-4">
-          {/* Avatar */}
-          <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0 ${customer.is_vip ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-[#1447E6] to-[#0F3CC7]'}`}>
+          <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0 ${customer.status === 'vip' ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-[#1447E6] to-[#0F3CC7]'}`}>
             {customer.name ? customer.name.charAt(0).toUpperCase() : 'M'}
           </div>
 
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <h3 className="font-bold text-sm text-gray-900 truncate">{customer.name}</h3>
-              {customer.is_vip && (
+              {customer.status === 'vip' && (
                 <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full shrink-0">VIP</span>
               )}
             </div>
@@ -117,29 +109,16 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
             </div>
           </div>
 
-          {/* Debt badge */}
           <div className="text-right shrink-0">
             {hasDebt ? (
-              <div className="space-y-0.5">
-                {debtUZS > 0 && (
-                  <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
-                    {debtUZS.toLocaleString()} so'm
-                  </span>
-                )}
-                {debtUSD > 0 && (
-                  <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
-                    {debtUSD.toLocaleString()} $
-                  </span>
-                )}
-              </div>
+              <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-xl block">
+                {debt.toLocaleString()} so'm
+              </span>
             ) : (
               <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-xl block">
                 Qarsiz
               </span>
             )}
-            <span className="text-[9px] text-gray-400 mt-0.5 block">
-              {customer.last_purchase_date ? new Date(customer.last_purchase_date).toLocaleDateString() : ''}
-            </span>
           </div>
         </div>
       </motion.div>
@@ -147,74 +126,25 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
   );
 };
 
-const CustomerMessageHistoryView = ({ customerId, onClose }) => {
-  const { data: messages, isLoading } = useCustomerMessageHistory(customerId);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 400 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 400 }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="absolute inset-0 z-[110] bg-[#F0F4FF] flex flex-col"
-    >
-      <div className="bg-white border-b border-gray-100 p-4 flex items-center justify-between shadow-sm relative z-10">
-        <h3 className="font-bold text-gray-900">Xabarlar tarixi</h3>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-600">
-          <FiX className="w-4 h-4"/>
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 relative z-0">
-        {isLoading ? (
-          <div className="flex justify-center py-10"><FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" /></div>
-        ) : messages?.length > 0 ? (
-          messages.map(msg => (
-            <div key={msg.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#1447E6] bg-blue-50 px-2 py-0.5 rounded-lg">{msg.source_display}</span>
-                <span className="text-[10px] text-gray-400">{new Date(msg.created_at).toLocaleString()}</span>
-              </div>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.text}</p>
-              {msg.error && (
-                <p className="text-xs text-red-500 mt-2 bg-red-50 p-2 rounded-lg">{msg.error}</p>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-10 text-gray-400 text-sm">Xabarlar tarixi bo'sh</div>
-        )}
-      </div>
-    </motion.div>
-  );
-};
-
-const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdit }) => {
+const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState('');
-  const [payCurrency, setPayCurrency] = useState('UZS');
   const [showHistory, setShowHistory] = useState(false);
-  const [showTelegramForm, setShowTelegramForm] = useState(false);
-  const [telegramMessage, setTelegramMessage] = useState('');
-  const [showMsgHistory, setShowMsgHistory] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
   const payDebtMutation = usePayDebt();
   const sendReminderMutation = useSendDebtReminder();
   const unlinkMutation = useUnlinkTelegram();
-  const sendMessageMutation = useSendMessage();
-  // Fetch full customer detail for accurate is_linked, link_token, address etc.
   const { data: customerDetail, isLoading: detailLoading } = useCustomer(customer?.id);
   const { data: historyData, isLoading: historyLoading } = useCustomerSalesHistory(showHistory ? customer?.id : null);
-  const salesHistory = historyData || [];
+  const salesHistory = historyData?.results || historyData || [];
 
   if (!customer) return null;
 
-  // Use fresh detail data, fall back to list snapshot while loading
   const detail = customerDetail || customer;
-  const debtUZS = parseFloat(detail.debt_uzs || 0);
-  const debtUSD = parseFloat(detail.debt_usd || 0);
-  const hasDebt = debtUZS > 0 || debtUSD > 0;
-  const currentDebtAmount = payCurrency === 'USD' ? debtUSD : debtUZS;
+  const debt = parseFloat(detail.debt || 0);
+  const hasDebt = debt > 0;
+  const totalSpent = parseFloat(detail.total_spent || 0);
   const isLinked = customerDetail?.is_linked ?? false;
   const botLinkLoading = !customerDetail && detailLoading;
   const deepLink = customerDetail?.link_token
@@ -228,7 +158,7 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
       return;
     }
     try {
-      await payDebtMutation.mutateAsync({ id: customer.id, data: { amount: parseFloat(payAmount), currency: payCurrency } });
+      await payDebtMutation.mutateAsync({ id: customer.id, data: { amount: parseFloat(payAmount) } });
       setShowPayForm(false);
       setPayAmount('');
       onClose();
@@ -248,16 +178,6 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
         onClose();
       } catch (error) {}
     }
-  };
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!telegramMessage.trim()) return;
-    try {
-      await sendMessageMutation.mutateAsync({ id: customer.id, data: { text: telegramMessage } });
-      setTelegramMessage('');
-      setShowTelegramForm(false);
-    } catch(err) {}
   };
 
   const copyBotLink = () => {
@@ -299,7 +219,7 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
       {/* Avatar card overlapping header */}
       <div className="px-5 -mt-12 relative z-10 mb-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shrink-0 ${detail.is_vip ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-[#1447E6] to-[#0F3CC7]'}`}>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shrink-0 ${detail.status === 'vip' ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-[#1447E6] to-[#0F3CC7]'}`}>
             {detail.name ? detail.name.charAt(0).toUpperCase() : 'M'}
           </div>
           <div className="flex-1 min-w-0">
@@ -308,7 +228,7 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
               <FiPhone className="w-3.5 h-3.5" />
               <span>{detail.phone}</span>
             </div>
-            {detail.is_vip && (
+            {detail.status === 'vip' && (
               <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full mt-1 inline-block">VIP</span>
             )}
           </div>
@@ -320,21 +240,19 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
             <span className="text-xs text-gray-500 block mb-1">Jami xaridlar</span>
-            {parseFloat(detail.total_spent_uzs || 0) > 0 && (
-              <span className="font-bold text-gray-900 text-sm block">{parseFloat(detail.total_spent_uzs || 0).toLocaleString()} so'm</span>
-            )}
-            {parseFloat(detail.total_spent_usd || 0) > 0 && (
-              <span className="font-bold text-gray-900 text-sm block">{parseFloat(detail.total_spent_usd || 0).toLocaleString()} $</span>
-            )}
-            {parseFloat(detail.total_spent_uzs || 0) === 0 && parseFloat(detail.total_spent_usd || 0) === 0 && (
+            {totalSpent > 0 ? (
+              <span className="font-bold text-gray-900 text-sm block">{totalSpent.toLocaleString()} so'm</span>
+            ) : (
               <span className="font-bold text-gray-400 text-sm">0 so'm</span>
             )}
           </div>
           <div className={`rounded-2xl p-4 shadow-sm border text-center ${hasDebt ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
             <span className={`text-xs block mb-1 ${hasDebt ? 'text-red-500' : 'text-blue-600'}`}>Joriy qarz</span>
-            {debtUZS > 0 && <span className={`font-bold text-sm block ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{debtUZS.toLocaleString()} so'm</span>}
-            {debtUSD > 0 && <span className={`font-bold text-sm block ${hasDebt ? 'text-red-600' : 'text-blue-600'}`}>{debtUSD.toLocaleString()} $</span>}
-            {!hasDebt && <span className="font-bold text-sm text-blue-600">Qarsiz</span>}
+            {hasDebt ? (
+              <span className="font-bold text-sm text-red-600">{debt.toLocaleString()} so'm</span>
+            ) : (
+              <span className="font-bold text-sm text-blue-600">Qarsiz</span>
+            )}
           </div>
         </div>
 
@@ -432,94 +350,47 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
           )}
         </div>
 
-        {/* Telegram actions */}
-        <div>
-          {botLinkLoading ? (
-            <div className="flex items-center justify-center gap-2 py-3 text-sm text-gray-400">
-              <FiLoader className="animate-spin w-4 h-4" /> Telegram holati tekshirilmoqda...
-            </div>
-          ) : isLinked ? (
-            /* Telegram IS linked — send message + history */
-            <div className="space-y-3">
-              {showTelegramForm ? (
-                <form onSubmit={handleSendMessage} className="bg-blue-50 rounded-2xl p-4 space-y-3 border border-blue-100">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-blue-700">Telegram xabar yuborish</p>
-                    <button
-                      type="button"
-                      onClick={() => { setShowTelegramForm(false); setTelegramMessage(''); }}
-                      className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center"
-                    >
-                      <FiX className="w-3 h-3 text-blue-600" />
-                    </button>
-                  </div>
-                  <textarea
-                    value={telegramMessage}
-                    onChange={e => setTelegramMessage(e.target.value)}
-                    placeholder="Xabar yozing..."
-                    autoFocus
-                    className="w-full bg-white border border-blue-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 min-h-[90px] resize-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={sendMessageMutation.isPending || !telegramMessage.trim()}
-                    className="w-full py-3 bg-[#1447E6] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
-                  >
-                    {sendMessageMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiSend className="w-4 h-4" />}
-                    {sendMessageMutation.isPending ? 'Yuborilmoqda...' : 'Yuborish'}
-                  </button>
-                </form>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setShowTelegramForm(true)}
-                    className="bg-[#1447E6] text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md active:scale-95 transition-transform"
-                  >
-                    <FiSend className="w-4 h-4" /> Telegram xabar
-                  </button>
-                  <button
-                    onClick={() => setShowMsgHistory(true)}
-                    className="bg-gray-800 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md active:scale-95 transition-transform"
-                  >
-                    <FiMessageSquare className="w-4 h-4" /> Xabarlar tarixi
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Telegram NOT linked — show pretty bot link */
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                  <FiMessageCircle className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-blue-700">Telegram bog'lash</p>
-                  <p className="text-[10px] text-blue-500">Linkni mijozga yuboring</p>
-                </div>
+        {/* Telegram section — only show bot link if not linked */}
+        {!isLinked && (
+          <div>
+            {botLinkLoading ? (
+              <div className="flex items-center justify-center gap-2 py-3 text-sm text-gray-400">
+                <FiLoader className="animate-spin w-4 h-4" /> Telegram holati tekshirilmoqda...
               </div>
-              {deepLink && (
-                <div className="bg-white rounded-xl px-3 py-2.5 mb-3 border border-blue-100">
-                  <p className="text-[11px] text-gray-500 break-all font-mono select-all leading-relaxed">
-                    {deepLink}
-                  </p>
+            ) : (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                    <FiMessageCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-blue-700">Telegram bog'lash</p>
+                    <p className="text-[10px] text-blue-500">Linkni mijozga yuboring</p>
+                  </div>
                 </div>
-              )}
-              <button
-                onClick={copyBotLink}
-                disabled={!deepLink}
-                className={`w-full rounded-xl py-3 font-bold flex items-center justify-center gap-2 text-sm transition-all active:scale-95 ${
-                  linkCopied
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-[#1447E6] text-white disabled:opacity-50'
-                }`}
-              >
-                {linkCopied ? <FiCheckCircle className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
-                {linkCopied ? 'Nusxalandi!' : 'Linkni nusxalash'}
-              </button>
-            </div>
-          )}
-        </div>
+                {deepLink && (
+                  <div className="bg-white rounded-xl px-3 py-2.5 mb-3 border border-blue-100">
+                    <p className="text-[11px] text-gray-500 break-all font-mono select-all leading-relaxed">
+                      {deepLink}
+                    </p>
+                  </div>
+                )}
+                <button
+                  onClick={copyBotLink}
+                  disabled={!deepLink}
+                  className={`w-full rounded-xl py-3 font-bold flex items-center justify-center gap-2 text-sm transition-all active:scale-95 ${
+                    linkCopied
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-[#1447E6] text-white disabled:opacity-50'
+                  }`}
+                >
+                  {linkCopied ? <FiCheckCircle className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
+                  {linkCopied ? 'Nusxalandi!' : 'Linkni nusxalash'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Debt actions */}
         {hasDebt && (
@@ -528,31 +399,21 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
               <form onSubmit={handlePayDebt} className="bg-red-50 rounded-2xl p-4 space-y-3 border border-red-100">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-red-600">
-                    Qarz: {debtUZS > 0 && `${debtUZS.toLocaleString()} so'm`}{debtUZS > 0 && debtUSD > 0 && ' • '}{debtUSD > 0 && `${debtUSD.toLocaleString()} $`}
+                    Qarz: {debt.toLocaleString()} so'm
                   </p>
-                  {debtUZS > 0 && debtUSD > 0 && (
-                    <div className="flex rounded-xl overflow-hidden border border-red-200">
-                      {['UZS', 'USD'].map(cur => (
-                        <button key={cur} type="button" onClick={() => { setPayCurrency(cur); setPayAmount(''); }}
-                          className={`px-3 py-1 text-xs font-bold transition-colors ${payCurrency === cur ? 'bg-red-500 text-white' : 'bg-white text-red-500'}`}>
-                          {cur}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     value={payAmount}
                     onChange={e => setPayAmount(e.target.value)}
-                    placeholder={`Miqdor (${payCurrency === 'USD' ? '$' : "so'm"})`}
-                    max={currentDebtAmount}
+                    placeholder="Miqdor (so'm)"
+                    max={debt}
                     className="flex-1 bg-white border border-red-200 rounded-xl py-3 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-300"
                   />
                   <button
                     type="button"
-                    onClick={() => setPayAmount(currentDebtAmount.toString())}
+                    onClick={() => setPayAmount(debt.toString())}
                     className="px-3 bg-red-100 text-red-600 rounded-xl text-xs font-bold whitespace-nowrap border border-red-200 hover:bg-red-200 transition-colors"
                   >
                     To'liq
@@ -596,17 +457,7 @@ const CustomerDetailModal = ({ customer, onClose, onViewReceipt, onDelete, onEdi
             )}
           </div>
         )}
-
       </div>
-
-      <AnimatePresence>
-        {showMsgHistory && (
-          <CustomerMessageHistoryView 
-            customerId={customer.id} 
-            onClose={() => setShowMsgHistory(false)} 
-          />
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };
@@ -616,8 +467,7 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
     name: initialData?.name || '',
     phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',
     address: initialData?.address || '',
-    debt_uzs: initialData?.debt_uzs || 0,
-    debt_usd: initialData?.debt_usd || 0,
+    debt: initialData?.debt || 0,
     status: initialData?.status || 'active',
     note: initialData?.note || '',
   });
@@ -704,29 +554,16 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
               <option value="inactive">Nofaol</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
-              <input
-                name="debt_uzs"
-                value={formData.debt_uzs}
-                onChange={e => setFormData({ ...formData, debt_uzs: e.target.value })}
-                type="number"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz ($)</label>
-              <input
-                name="debt_usd"
-                value={formData.debt_usd}
-                onChange={e => setFormData({ ...formData, debt_usd: e.target.value })}
-                type="number"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
-                placeholder="0"
-              />
-            </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
+            <input
+              name="debt"
+              value={formData.debt}
+              onChange={e => setFormData({ ...formData, debt: e.target.value })}
+              type="number"
+              className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+              placeholder="0"
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 block mb-1.5">Eslatma (Note)</label>
@@ -814,7 +651,6 @@ const Customers = () => {
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] font-sans pb-32 md:pb-8">
-      {/* Blue gradient header */}
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-8 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
         <div className="absolute top-10 -right-4 w-16 h-16 bg-white/5 rounded-full" />
@@ -833,7 +669,6 @@ const Customers = () => {
       </div>
 
       <div className="px-4 md:px-8 -mt-3 relative z-10 max-w-6xl mx-auto">
-        {/* Search */}
         <div className="relative mb-4">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <FiSearch className="text-gray-400 w-4 h-4" />
@@ -847,7 +682,6 @@ const Customers = () => {
           />
         </div>
 
-        {/* Filter chips */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 mb-4">
           {['Barchasi', 'Qarzdorlar', 'Faol', 'VIP'].map((filter) => (
             <button
@@ -864,7 +698,6 @@ const Customers = () => {
           ))}
         </div>
 
-        {/* Customer list */}
         <div className="mt-2 md:grid md:grid-cols-2 md:gap-3">
           {isLoading ? (
             <div className="flex justify-center py-20 md:col-span-2">
@@ -890,7 +723,6 @@ const Customers = () => {
         </div>
       </div>
 
-      {/* FAB */}
       <button
         onClick={() => { setCustomerToEdit(null); setIsAddEditModalOpen(true); }}
         className="fixed bottom-24 right-5 w-14 h-14 bg-[#1447E6] rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 text-white z-40 active:scale-95 transition-transform"
@@ -903,7 +735,6 @@ const Customers = () => {
           <CustomerDetailModal
             customer={selectedCustomer}
             onClose={() => setSelectedCustomer(null)}
-            onViewReceipt={() => {}}
             onDelete={handleDeleteCustomer}
             onEdit={handleEditCustomer}
           />

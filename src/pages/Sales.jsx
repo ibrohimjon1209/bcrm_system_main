@@ -51,7 +51,7 @@ const Sales = () => {
         id: product.id,
         name: product.name,
         price: parseFloat(product.sale_price || 0),
-        currency: product.sale_currency || 'UZS',
+        currency: product.currency || 'uzs',
         quantity: 1,
         maxQuantity: product.quantity
       }]);
@@ -76,8 +76,8 @@ const Sales = () => {
   const getDefaultTotal = () => cart.reduce((total, item) => total + (parseFloat(item.price || 0) * item.quantity), 0);
 
   // Determine currency from cart (all items assumed same currency)
-  const cartCurrency = cart.find(i => i.currency)?.currency || 'UZS';
-  const cur = cartCurrency === 'USD' ? '$' : "so'm";
+  const cartCurrency = cart.find(i => i.currency)?.currency || 'uzs';
+  const cur = cartCurrency === 'usd' ? '$' : "so'm";
 
   // Custom sale price entered by user overrides product prices
   const customSaleAmount = parseFloat(paidAmount) || 0;
@@ -101,7 +101,7 @@ const Sales = () => {
       items: cart.map(item => ({
         product: item.id,
         quantity: item.quantity,
-        price: parseFloat((item.price * scaleFactor).toFixed(2))
+        price: (item.price * scaleFactor).toFixed(2)
       }))
     };
     try {
@@ -307,7 +307,7 @@ const Sales = () => {
                 <h4 className="font-semibold text-gray-800 text-xs mb-1.5 truncate leading-tight">{product.name}</h4>
                 <div className="flex items-center justify-between">
                   <p className="text-[#1447E6] font-bold text-sm">
-                    {parseFloat(product.sale_price || 0).toLocaleString()} {product.sale_currency === 'USD' ? '$' : "so'm"}
+                    {parseFloat(product.sale_price || 0).toLocaleString()} {product.currency === 'usd' ? '$' : "so'm"}
                   </p>
                   <div className="w-6 h-6 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center group-hover:bg-[#1447E6] group-hover:text-white transition-colors">
                     <FiPlus className="w-3 h-3" />
@@ -331,7 +331,7 @@ const Sales = () => {
                 <div key={item.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-gray-900 text-xs truncate">{item.name}</h4>
-                    <p className="text-[10px] text-gray-400">{item.price.toLocaleString()} {item.currency === 'USD' ? '$' : "so'm"}</p>
+                    <p className="text-[10px] text-gray-400">{item.price.toLocaleString()} {item.currency === 'usd' ? '$' : "so'm"}</p>
                   </div>
                   <div className="flex items-center bg-gray-50 rounded-xl p-0.5">
                     <button
