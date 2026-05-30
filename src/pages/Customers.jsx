@@ -5,10 +5,10 @@ import {
   FiPlus, FiSearch, FiPhone, FiEdit,
   FiTrash2, FiMessageCircle, FiFileText, FiX, FiCheckCircle,
   FiMapPin, FiCalendar, FiCreditCard, FiLoader, FiUsers,
-  FiChevronDown, FiChevronUp, FiCopy
+  FiChevronDown, FiChevronUp
 } from 'react-icons/fi';
 import { FiSend } from 'react-icons/fi';
-import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder, useUnlinkTelegram } from '../hooks/useCustomers';
+import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder } from '../hooks/useCustomers';
 import { toast } from 'react-toastify';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
@@ -131,11 +131,8 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const [payAmount, setPayAmount] = useState('');
   const [payCurrency, setPayCurrency] = useState('uzs');
   const [showHistory, setShowHistory] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-
   const payDebtMutation = usePayDebt();
   const sendReminderMutation = useSendDebtReminder();
-  const unlinkMutation = useUnlinkTelegram();
   const { data: customerDetail, isLoading: detailLoading } = useCustomer(customer?.id);
   const { data: historyData, isLoading: historyLoading } = useCustomerSalesHistory(showHistory ? customer?.id : null);
   const salesHistory = historyData?.results || historyData || [];
@@ -149,10 +146,6 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const totalSpentUzs = parseFloat(detail.total_spent_uzs || 0);
   const totalSpentUsd = parseFloat(detail.total_spent_usd || 0);
   const isLinked = customerDetail?.is_linked ?? false;
-  const botLinkLoading = !customerDetail && detailLoading;
-  const deepLink = customerDetail?.link_token
-    ? `https://t.me/market_crm_robot?start=cust_${customerDetail.link_token}`
-    : null;
 
   const handlePayDebt = async (e) => {
     e.preventDefault();
@@ -175,24 +168,6 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
     try {
       await sendReminderMutation.mutateAsync(customer.id);
     } catch (error) {}
-  };
-
-  const handleUnlink = async () => {
-    if (window.confirm("Telegramni uzishni tasdiqlaysizmi?")) {
-      try {
-        await unlinkMutation.mutateAsync(customer.id);
-        onClose();
-      } catch (error) {}
-    }
-  };
-
-  const copyBotLink = () => {
-    if (deepLink) {
-      navigator.clipboard.writeText(deepLink);
-      setLinkCopied(true);
-      toast.success("Bot linki nusxalandi!");
-      setTimeout(() => setLinkCopied(false), 2500);
-    }
   };
 
   return (
@@ -338,67 +313,19 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
             </div>
           )}
 
-          {isLinked && (
-            <div className="flex items-center gap-3 p-4">
-              <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-                <FiMessageCircle className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[10px] text-gray-400 block">Telegram</span>
-                <span className="text-sm font-medium text-blue-600">Ulangan ✓</span>
-              </div>
-              <button
-                onClick={handleUnlink}
-                disabled={unlinkMutation.isPending}
-                className="text-xs text-red-400 hover:text-red-600 font-semibold px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 transition-colors"
-              >
-                {unlinkMutation.isPending ? <FiLoader className="animate-spin w-3 h-3" /> : 'Uzish'}
-              </button>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className={`w-9 h-9 ${isLinked ? 'bg-blue-50' : 'bg-gray-50'} rounded-xl flex items-center justify-center shrink-0`}>
+              <FiMessageCircle className={`w-4 h-4 ${isLinked ? 'text-blue-500' : 'text-gray-400'}`} />
             </div>
-          )}
-        </div>
-
-        {/* Telegram section — only show bot link if not linked */}
-        {!isLinked && (
-          <div>
-            {botLinkLoading ? (
-              <div className="flex items-center justify-center gap-2 py-3 text-sm text-gray-400">
-                <FiLoader className="animate-spin w-4 h-4" /> Telegram holati tekshirilmoqda...
-              </div>
-            ) : (
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                    <FiMessageCircle className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-blue-700">Telegram bog'lash</p>
-                    <p className="text-[10px] text-blue-500">Linkni mijozga yuboring</p>
-                  </div>
-                </div>
-                {deepLink && (
-                  <div className="bg-white rounded-xl px-3 py-2.5 mb-3 border border-blue-100">
-                    <p className="text-[11px] text-gray-500 break-all font-mono select-all leading-relaxed">
-                      {deepLink}
-                    </p>
-                  </div>
-                )}
-                <button
-                  onClick={copyBotLink}
-                  disabled={!deepLink}
-                  className={`w-full rounded-xl py-3 font-bold flex items-center justify-center gap-2 text-sm transition-all active:scale-95 ${
-                    linkCopied
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-[#1447E6] text-white disabled:opacity-50'
-                  }`}
-                >
-                  {linkCopied ? <FiCheckCircle className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
-                  {linkCopied ? 'Nusxalandi!' : 'Linkni nusxalash'}
-                </button>
-              </div>
-            )}
+            <div>
+              <span className="text-[10px] text-gray-400 block">Telegram</span>
+              {isLinked
+                ? <span className="text-sm font-bold text-blue-600">Ulangan ✓</span>
+                : <span className="text-sm font-medium text-gray-400">Ulanmagan</span>
+              }
+            </div>
           </div>
-        )}
+        </div>
 
         {/* Debt actions */}
         {hasDebt && (
