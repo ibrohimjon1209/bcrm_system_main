@@ -165,7 +165,9 @@ const Purchases = () => {
                     <FiPackage className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-sm">Xarid #{purchase.id}</h3>
+                    <h3 className="font-bold text-gray-900 text-sm truncate max-w-[160px]">
+                      {purchase.note ? purchase.note : `Xarid #${purchase.id}`}
+                    </h3>
                     <p className="text-[10px] text-gray-400 mt-0.5">
                       {new Date(purchase.created_at).toLocaleDateString()} • {getItemsCount(purchase.id) ?? '...'} ta mahsulot
                     </p>

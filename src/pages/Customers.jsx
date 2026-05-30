@@ -490,8 +490,8 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
     name: initialData?.name || '',
     phone: initialData?.phone ? formatPhoneNumber(initialData.phone) : '+998',
     address: initialData?.address || '',
-    debt_uzs: initialData?.debt_uzs || '',
-    debt_usd: initialData?.debt_usd || '',
+    debt_uzs: initialData?.debt_uzs || '0',
+    debt_usd: initialData?.debt_usd || '0',
     status: initialData?.status || 'active',
     note: initialData?.note || '',
   });
@@ -578,30 +578,32 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
               <option value="inactive">Nofaol</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
-              <input
-                name="debt_uzs"
-                value={formData.debt_uzs}
-                onChange={e => setFormData({ ...formData, debt_uzs: e.target.value })}
-                type="number"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
-                placeholder="0"
-              />
+          {initialData && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz (so'm)</label>
+                <input
+                  name="debt_uzs"
+                  value={formData.debt_uzs}
+                  onChange={e => setFormData({ ...formData, debt_uzs: e.target.value })}
+                  type="number"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz ($)</label>
+                <input
+                  name="debt_usd"
+                  value={formData.debt_usd}
+                  onChange={e => setFormData({ ...formData, debt_usd: e.target.value })}
+                  type="number"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                  placeholder="0"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">Qarz ($)</label>
-              <input
-                name="debt_usd"
-                value={formData.debt_usd}
-                onChange={e => setFormData({ ...formData, debt_usd: e.target.value })}
-                type="number"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
-                placeholder="0"
-              />
-            </div>
-          </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-gray-500 block mb-1.5">Eslatma (Note)</label>
             <textarea

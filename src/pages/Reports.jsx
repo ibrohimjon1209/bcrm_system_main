@@ -78,7 +78,8 @@ const Reports = () => {
   // Dashboard stats — new field names
   const revUZS    = parseFloat(dashStats?.revenue_uzs ?? 0);
   const revUSD    = parseFloat(dashStats?.revenue_usd ?? 0);
-  const profUZS   = parseFloat(dashStats?.profit_uzs  ?? 0);
+  const profUZS   = parseFloat(dashStats?.profit_uzs ?? dashStats?.gross_profit_uzs ?? 0);
+  const profUSD   = parseFloat(dashStats?.profit_usd ?? dashStats?.gross_profit_usd ?? 0);
   const debtUZS   = parseFloat(dashStats?.debt_uzs    ?? 0);
   const debtUSD   = parseFloat(dashStats?.debt_usd    ?? 0);
   const salesCount = dashStats?.sales_count ?? 0;
@@ -161,6 +162,7 @@ const Reports = () => {
                 icon={FiTrendingUp} bg="bg-teal-50" color="text-teal-600"
                 title="Sof Foyda"
                 value={`${fmt(profUZS)} so'm`}
+                valueUSD={profUSD > 0 ? profUSD : null}
                 sub={dashPeriod}
                 loading={dashLoading}
               />
@@ -358,15 +360,14 @@ const Reports = () => {
                 {/* Summary cards */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
-                    { label: 'Tushum',         uzs: profitData.revenue_by_currency?.UZS ?? profitData.revenue,       usd: profitData.revenue_by_currency?.USD ?? 0,      bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
-                    { label: 'Sotuv xarajati', uzs: profitData.sale_cost_by_currency?.UZS ?? profitData.sale_cost,   usd: profitData.sale_cost_by_currency?.USD ?? 0,    bg: 'bg-orange-50',  color: 'text-orange-600'  },
-                    { label: 'Yalpi foyda',    uzs: profitData.gross_profit,                                          usd: 0,                                             bg: 'bg-teal-50',    color: 'text-teal-600'    },
-                    { label: 'Sof foyda',      uzs: profitData.profit_by_currency?.UZS ?? profitData.net_profit,     usd: profitData.profit_by_currency?.USD ?? 0,       bg: 'bg-emerald-50', color: 'text-emerald-600' },
+                    { label: 'Tushum',         uzs: profitData.revenue_uzs    ?? 0, usd: profitData.revenue_usd    ?? 0, bg: 'bg-blue-50',    color: 'text-[#1447E6]'   },
+                    { label: 'Sotuv xarajati', uzs: profitData.sale_cost_uzs  ?? 0, usd: 0,                              bg: 'bg-orange-50',  color: 'text-orange-600'  },
+                    { label: 'Yalpi foyda',    uzs: profitData.gross_profit_uzs ?? 0, usd: profitData.gross_profit_usd ?? 0, bg: 'bg-teal-50', color: 'text-teal-600'    },
                   ].map((item, i) => (
                     <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                       <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${item.color}`}>{item.label}</p>
                       <p className={`text-base font-black ${item.color} leading-tight`}>{fmt(item.uzs)} so'm</p>
-                      {parseFloat(item.usd) > 0 && <p className="text-sm font-bold text-gray-500">{fmt(item.usd)} $</p>}
+                      {parseFloat(item.usd) > 0 && <p className="text-sm font-bold text-emerald-600">${fmt(item.usd)}</p>}
                     </div>
                   ))}
                 </div>
@@ -380,7 +381,8 @@ const Reports = () => {
                         <div key={i} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
                           <span className="text-xs font-semibold text-gray-500">{row.month || row.date || row.period}</span>
                           <div className="text-right space-y-0.5">
-                            <p className="text-xs font-bold text-gray-900">{fmt(row.revenue)} so'm</p>
+                            {parseFloat(row.revenue_uzs || 0) > 0 && <p className="text-xs font-bold text-[#1447E6]">{fmt(row.revenue_uzs)} so'm</p>}
+                            {parseFloat(row.revenue_usd || 0) > 0 && <p className="text-xs font-bold text-emerald-600">${fmt(row.revenue_usd)}</p>}
                             <p className="text-[10px] text-gray-400 font-semibold">{row.count} ta sotuv</p>
                           </div>
                         </div>
