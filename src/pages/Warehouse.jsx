@@ -54,17 +54,17 @@ const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel,
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setFormData({ ...formData, currency: 'uzs', sale_price: '', cost_price: '' })}
-            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${isUzs ? 'bg-[#1447E6] text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-          >
-            so'm (UZS)
-          </button>
-          <button
-            type="button"
             onClick={() => setFormData({ ...formData, currency: 'usd', sale_price: '', cost_price: '' })}
             className={`py-2.5 rounded-xl font-bold text-sm transition-all ${!isUzs ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
           >
             $ (USD)
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, currency: 'uzs', sale_price: '', cost_price: '' })}
+            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${isUzs ? 'bg-[#1447E6] text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            so'm (UZS)
           </button>
         </div>
       </div>
@@ -135,7 +135,7 @@ const Warehouse = () => {
     quantity: '',
     sale_price: '',
     cost_price: '',
-    currency: 'uzs',
+    currency: 'usd',
     unit: 'dona',
   });
 
