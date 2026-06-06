@@ -713,10 +713,11 @@ const Sales = () => {
               ))}
             </div>
 
-            {/* Mijoz — faqat nasiyada */}
-            {paymentType === 'debt' && (
-              <div className="mb-4">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Mijoz</label>
+            {/* Mijoz — barcha to'lov turlarida (nasiyada majburiy) */}
+            <div className="mb-4">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                Mijoz {paymentType === 'debt' ? <span className="text-red-400">*</span> : <span className="text-gray-300">(ixtiyoriy)</span>}
+              </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -743,8 +744,7 @@ const Sales = () => {
                     <FiPlus className="w-5 h-5" />
                   </button>
                 </div>
-              </div>
-            )}
+            </div>
 
             {paymentType !== 'debt' && (
               <div className="mb-4 space-y-3">
