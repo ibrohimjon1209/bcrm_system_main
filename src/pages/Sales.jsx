@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
 import {
-  FiSearch, FiPlus, FiMinus, FiX, FiCheck, FiSend, FiShare2,
-  FiArrowLeft, FiPackage, FiLoader, FiShoppingCart, FiUser,
-  FiChevronLeft, FiChevronRight, FiEdit2, FiTrash2
-} from 'react-icons/fi';
+  MagnifyingGlass, Plus, Minus, X, Check, PaperPlaneRight, ShareNetwork,
+  ArrowLeft, Package, Spinner, ShoppingCart, User,
+  CaretLeft, CaretRight, PencilSimple, Trash
+} from '@phosphor-icons/react';
 import { useProductsForSale } from '../hooks/useProducts';
 import { useCustomers, useCreateCustomer } from '../hooks/useCustomers';
 import { useCreateSale, useSales, useSale, useUpdateSale, useDeleteSale } from '../hooks/useSales';
@@ -174,6 +174,8 @@ const Sales = () => {
   const [showDeleteSaleModal, setShowDeleteSaleModal] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [editSaleData, setEditSaleData] = useState({ payment_method: 'cash', note: '', debt_due_date: '' });
+  const [showVariantModal, setShowVariantModal] = useState(false);
+  const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/USD')
@@ -216,34 +218,58 @@ const Sales = () => {
   const totalProductPages = productsData?.count ? Math.ceil(productsData.count / 20) : 1;
   const customers = customersData?.results || [];
 
-  const addToCart = (product) => {
-    if (product.quantity <= 0) {
+  const handleProductClick = (product) => {
+    const variants = product.variants || [];
+    if (product.has_variants && variants.length > 0) {
+      if (variants.length === 1) {
+        addToCart(product, variants[0]);
+      } else {
+        setSelectedProductForVariants(product);
+        setShowVariantModal(true);
+      }
+      return;
+    }
+
+    addToCart(product, variants[0] || null);
+  };
+
+  const addToCart = (product, variant = null) => {
+    const qty = variant ? variant.quantity : (product.total_quantity ?? product.quantity);
+    if (qty <= 0) {
       toast.warning('Mahsulot omborda qolmagan');
       return;
     }
-    const existingItem = cart.find(item => item.id === product.id);
+    const cartId = variant ? `v-${variant.id}` : `p-${product.id}`;
+    const existingItem = cart.find(item => item.cartId === cartId);
+
     if (existingItem) {
       const currentQty = parseInt(existingItem.quantity, 10) || 0;
-      if (currentQty < product.quantity) {
+      if (currentQty < qty) {
         setCart(cart.map(item =>
-          item.id === product.id ? { ...item, quantity: currentQty + 1 } : item
+          item.cartId === cartId ? { ...item, quantity: currentQty + 1 } : item
         ));
       } else {
         toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
       }
     } else {
-      const isUzs = product.currency === 'uzs';
-      const priceUzs = isUzs ? parseFloat(product.sale_price || 0) : 0;
-      const priceUsd = !isUzs ? parseFloat(product.sale_price || 0) : 0;
+      const isUzs = (variant ? variant.currency : product.currency) === 'uzs';
+      const salePrice = parseFloat((variant ? variant.sale_price : product.sale_price) || 0);
+      const priceUzs = isUzs ? salePrice : 0;
+      const priceUsd = !isUzs ? salePrice : 0;
       const newItem = {
-        id: product.id,
-        name: product.name,
-        price: isUzs ? priceUzs : priceUsd,
+        cartId,
+        id: cartId,
+        productId: product.id,
+        variantId: variant ? variant.id : null,
+        productName: product.name,
+        variantName: variant ? variant.name : null,
+        name: variant ? `${product.name} (${variant.name})` : product.name,
+        price: salePrice,
         price_uzs: priceUzs,
         price_usd: priceUsd,
         currency: isUzs ? 'UZS' : 'USD',
         quantity: 1,
-        maxQuantity: product.quantity
+        maxQuantity: qty
       };
       const newCart = [...cart, newItem];
       const newHasUzs = newCart.some(i => i.price_uzs > 0);
@@ -251,6 +277,7 @@ const Sales = () => {
       if (newHasUzs && !newHasUsd) setSelectedCurrency('UZS');
       else if (!newHasUzs && newHasUsd) setSelectedCurrency('USD');
       setCart(newCart);
+      if (variant) setShowVariantModal(false);
     }
   };
 
@@ -320,6 +347,10 @@ const Sales = () => {
 
     const uzsScale = cartHasUzs && customUzsAmount > 0 && defaultUzs > 0 ? customUzsAmount / defaultUzs : 1;
     const usdScale = cartHasUsd && customUsdAmount > 0 && defaultUsd > 0 ? customUsdAmount / defaultUsd : 1;
+    if (cart.some(item => !item.variantId)) {
+      toast.error('Tanlangan mahsulotlarda variant ma\'lumoti topilmadi');
+      return;
+    }
 
     const payload = {
       ...(selectedCustomer ? { customer: selectedCustomer.id } : {}),
@@ -330,7 +361,7 @@ const Sales = () => {
         const basePrice = isUsdItem ? item.price_usd : item.price_uzs;
         const scale = paymentType === 'debt' ? 1 : (isUsdItem ? usdScale : uzsScale);
         return {
-          product: item.id,
+          variant: item.variantId,
           quantity: item.quantity,
           price: (basePrice * scale).toFixed(2),
           currency: isUsdItem ? 'usd' : 'uzs',
@@ -392,7 +423,7 @@ const Sales = () => {
         <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl">
           <div className="text-center">
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
-              <FiCheck className="w-10 h-10 text-emerald-500" />
+              <Check className="w-10 h-10 text-emerald-500" />
             </div>
             <div className="mb-1 space-y-0.5">
               {saleAmounts.uzs === 0 && saleAmounts.usd === 0 ? (
@@ -436,7 +467,7 @@ const Sales = () => {
         <div className="bg-white rounded-3xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto shadow-2xl">
           <div className="flex items-center justify-between mb-5">
             <button onClick={handleNewSale} className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
-              <FiArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <h2 className="text-lg font-bold text-gray-900">Chek #{lastCreatedSale?.id}</h2>
             <div className="w-9" />
@@ -517,7 +548,7 @@ const Sales = () => {
             onClick={() => setShowHistoryDrawer(true)}
             className="flex items-center gap-2 bg-[#1447E6] text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 active:scale-95 transition-all"
           >
-            <FiShoppingCart className="w-3.5 h-3.5" />
+            <ShoppingCart className="w-3.5 h-3.5" />
             Tarix
             {historyTotal > 0 && (
               <span className="bg-white/20 px-1.5 py-0.5 rounded-lg text-[10px] font-black">{historyTotal}</span>
@@ -535,7 +566,7 @@ const Sales = () => {
           <div className="flex items-center justify-between gap-3 mb-3">
             <h3 className="text-sm font-bold text-gray-900">Mahsulotlar</h3>
             <div className="relative flex-1 max-w-[180px]">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
               <input
                 type="text"
                 placeholder="Qidirish..."
@@ -549,50 +580,73 @@ const Sales = () => {
           <div className="grid grid-cols-2 gap-2.5 max-h-[320px] overflow-y-auto pr-1">
             {productsLoading ? (
               <div className="col-span-full py-10 flex justify-center">
-                <FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" />
+                <Spinner className="w-6 h-6 text-[#1447E6] animate-spin" />
               </div>
             ) : products.length === 0 ? (
               <div className="col-span-full py-8 text-center text-sm text-gray-400">Mahsulot topilmadi</div>
             ) : products.map((product) => {
-              const isUzsProduct = product.currency === 'uzs';
-              const priceUzs = isUzsProduct ? parseFloat(product.sale_price || 0) : 0;
-              const priceUsd = !isUzsProduct ? parseFloat(product.sale_price || 0) : 0;
+              const variants = product.variants || [];
+              const displayVariant = variants.length === 1 ? variants[0] : null;
+              const isUzsProduct = (displayVariant ? displayVariant.currency : product.currency) === 'uzs';
+              const salePrice = parseFloat((displayVariant ? displayVariant.sale_price : product.sale_price) || 0);
+              const priceUzs = isUzsProduct ? salePrice : 0;
+              const priceUsd = !isUzsProduct ? salePrice : 0;
               const isHighPrice = priceUzs > 1000000 || priceUsd > 100;
+              const stockQty = product.total_quantity ?? product.quantity ?? 0;
+              const cartQty = product.has_variants
+                ? variants.reduce((sum, variant) => {
+                  const item = cart.find(i => i.variantId === variant.id);
+                  return sum + (parseInt(item?.quantity, 10) || 0);
+                }, 0)
+                : (parseInt(cart.find(i => i.productId === product.id)?.quantity, 10) || 0);
+              const isOutOfStock = stockQty <= 0 || cartQty >= stockQty;
 
               return (
                 <div
                   key={product.id}
-                  onClick={() => addToCart(product)}
-                  className={`${isHighPrice ? 'col-span-2' : ''} group cursor-pointer bg-white rounded-2xl p-3 border transition-all duration-200 ${product.quantity <= 0
+                  onClick={() => handleProductClick(product)}
+                  className={`${isHighPrice ? 'col-span-2' : ''} group cursor-pointer bg-white rounded-2xl p-3 border transition-all duration-200 ${isOutOfStock
                     ? 'opacity-50 grayscale border-gray-100'
                     : 'border-gray-100 hover:border-[#1447E6] hover:shadow-md active:scale-95'
                     }`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
-                      <FiPackage className="w-4 h-4 text-[#1447E6]" />
+                      <Package className="w-4 h-4 text-[#1447E6]" />
                     </div>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${product.quantity <= 0 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${isOutOfStock ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
                       }`}>
-                      {product.quantity <= 0 ? 'Yo\'q' : `${product.quantity} ${product.unit}`}
+                      {isOutOfStock ? 'Yo\'q' : `${stockQty} ${product.has_variants ? 'jami' : product.unit}`}
                     </span>
                   </div>
                   <h4 className="font-semibold text-gray-800 text-xs mb-1.5 truncate leading-tight">{product.name}</h4>
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-0.5">
-                      {priceUzs > 0 && (
-                        <p className="text-[#1447E6] font-bold text-xs leading-tight">
-                          {priceUzs.toLocaleString()} so'm
-                        </p>
-                      )}
-                      {priceUsd > 0 && (
-                        <p className="text-emerald-600 font-bold text-xs leading-tight">
-                          ${priceUsd.toLocaleString()}
-                        </p>
+                      {product.has_variants ? (
+                        variants.length === 1 ? (
+                          <p className="text-gray-500 font-bold text-[10px] leading-tight truncate">{variants[0].name}</p>
+                        ) : (
+                          <p className="text-gray-500 font-bold text-[10px] leading-tight">
+                            {product.variant_count} ta variant
+                          </p>
+                        )
+                      ) : (
+                        <>
+                          {priceUzs > 0 && (
+                            <p className="text-[#1447E6] font-bold text-xs leading-tight">
+                              {priceUzs.toLocaleString()} so'm
+                            </p>
+                          )}
+                          {priceUsd > 0 && (
+                            <p className="text-emerald-600 font-bold text-xs leading-tight">
+                              ${priceUsd.toLocaleString()}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                     <div className="w-6 h-6 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center group-hover:bg-[#1447E6] group-hover:text-white transition-colors">
-                      <FiPlus className="w-3 h-3" />
+                      {product.has_variants && variants.length !== 1 ? <CaretRight className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                     </div>
                   </div>
                 </div>
@@ -608,7 +662,7 @@ const Sales = () => {
                 disabled={productPage === 1 || productsLoading}
                 className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
               >
-                <FiChevronLeft className="w-4 h-4" />
+                <CaretLeft className="w-4 h-4" />
               </button>
               <span className="text-xs font-bold text-gray-500">
                 {productPage} / {totalProductPages}
@@ -619,7 +673,7 @@ const Sales = () => {
                 disabled={productPage === totalProductPages || productsLoading}
                 className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
               >
-                <FiChevronRight className="w-4 h-4" />
+                <CaretRight className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -644,7 +698,8 @@ const Sales = () => {
                     {/* Top row: name + total */}
                     <div className="flex items-center justify-between mb-2.5">
                       <div className="flex-1 min-w-0 pr-2">
-                        <p className="font-bold text-gray-900 text-sm truncate">{item.name}</p>
+                        <p className="font-bold text-gray-900 text-sm truncate">{item.productName}</p>
+                        {item.variantName && <p className="text-xs font-semibold text-[#1447E6] truncate">{item.variantName}</p>}
                         <p className="text-xs text-gray-400">{priceLabel} × {item.quantity}</p>
                       </div>
                       <p className={`text-sm font-black shrink-0 ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>{totalLabel}</p>
@@ -655,7 +710,7 @@ const Sales = () => {
                         onClick={() => updateQuantity(item.id, -1)}
                         className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-90 transition-all"
                       >
-                        <FiMinus className="w-5 h-5" />
+                        <Minus className="w-5 h-5" />
                       </button>
                       <input
                         type="number"
@@ -670,13 +725,13 @@ const Sales = () => {
                         onClick={() => updateQuantity(item.id, 1)}
                         className="w-11 h-11 rounded-2xl bg-[#1447E6] flex items-center justify-center text-white hover:bg-blue-700 active:scale-90 transition-all"
                       >
-                        <FiPlus className="w-5 h-5" />
+                        <Plus className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => removeFromCart(item.id)}
                         className="w-11 h-11 rounded-2xl bg-red-500 flex items-center justify-center text-white hover:bg-red-600 active:scale-90 transition-all"
                       >
-                        <FiX className="w-5 h-5" />
+                        <X className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -721,7 +776,7 @@ const Sales = () => {
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiUser className="text-gray-400 w-4 h-4" />
+                      <User className="text-gray-400 w-4 h-4" />
                     </div>
                     <select
                       value={selectedCustomer?.id || ''}
@@ -741,7 +796,7 @@ const Sales = () => {
                     onClick={() => setIsAddCustomerModalOpen(true)}
                     className="w-[46px] h-[46px] shrink-0 bg-[#1447E6] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center transition-colors"
                   >
-                    <FiPlus className="w-5 h-5" />
+                    <Plus className="w-5 h-5" />
                   </button>
                 </div>
             </div>
@@ -817,7 +872,7 @@ const Sales = () => {
                 disabled={!selectedCustomer}
                 className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <FiSend className="w-4 h-4" />
+                <PaperPlaneRight className="w-4 h-4" />
                 Davom etish
               </button>
             ) : (
@@ -826,7 +881,7 @@ const Sales = () => {
                 disabled={createSaleMutation.isPending}
                 className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {createSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
+                {createSaleMutation.isPending ? <Spinner className="animate-spin w-4 h-4" /> : <Check className="w-4 h-4" />}
                 Sotuvni yakunlash
               </button>
             )}
@@ -840,7 +895,7 @@ const Sales = () => {
             <div className="px-5 pt-5 pb-2 flex items-center justify-between border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">Nasiya ma'lumotlari</h2>
               <button onClick={() => setShowDebtModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
-                <FiX className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
@@ -867,7 +922,7 @@ const Sales = () => {
                 disabled={createSaleMutation.isPending || !debtDueDate}
                 className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {createSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
+                {createSaleMutation.isPending ? <Spinner className="animate-spin w-4 h-4" /> : <Check className="w-4 h-4" />}
                 Sotuvni yakunlash
               </button>
             </div>
@@ -886,14 +941,14 @@ const Sales = () => {
                 {historyTotal > 0 && <p className="text-xs text-gray-400">{historyTotal} ta sotuv</p>}
               </div>
               <button onClick={() => setShowHistoryDrawer(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-200">
-                <FiX className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             {/* Drawer body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {historyLoading && allHistorySales.length === 0 ? (
                 <div className="flex justify-center py-12">
-                  <FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" />
+                  <Spinner className="w-6 h-6 text-[#1447E6] animate-spin" />
                 </div>
               ) : allHistorySales.length === 0 ? (
                 <div className="py-12 text-center">
@@ -938,7 +993,7 @@ const Sales = () => {
                   disabled={historyFetching}
                   className="w-full py-3 bg-white border border-gray-100 rounded-2xl text-sm font-semibold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
                 >
-                  {historyFetching && <FiLoader className="animate-spin w-4 h-4" />}
+                  {historyFetching && <Spinner className="animate-spin w-4 h-4" />}
                   {historyFetching ? 'Yuklanmoqda...' : `Yana ko'rish (${historyTotal - allHistorySales.length} ta qoldi)`}
                 </button>
               )}
@@ -966,22 +1021,22 @@ const Sales = () => {
                   }}
                   className="w-8 h-8 bg-blue-50 text-[#1447E6] rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
                 >
-                  <FiEdit2 className="w-3.5 h-3.5" />
+                  <PencilSimple className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => { setShowDeleteSaleModal(true); setShowDetailModal(false); }}
                   className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                 >
-                  <FiTrash2 className="w-3.5 h-3.5" />
+                  <Trash className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={() => setShowDetailModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
-                  <FiX className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {detailLoading ? (
-              <div className="flex justify-center py-16"><FiLoader className="w-8 h-8 text-[#1447E6] animate-spin" /></div>
+              <div className="flex justify-center py-16"><Spinner className="w-8 h-8 text-[#1447E6] animate-spin" /></div>
             ) : saleDetail ? (
               <div className="p-5 space-y-4">
                 {/* Info */}
@@ -1083,7 +1138,7 @@ const Sales = () => {
             <div className="px-5 pt-5 pb-2 flex items-center justify-between border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">Sotuvni tahrirlash</h2>
               <button onClick={() => setShowEditSaleModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
-                <FiX className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
@@ -1122,7 +1177,7 @@ const Sales = () => {
                 }}
                 disabled={updateSaleMutation.isPending}
                 className="w-full py-4 bg-[#1447E6] text-white rounded-2xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
-                {updateSaleMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheck className="w-4 h-4" />}
+                {updateSaleMutation.isPending ? <Spinner className="animate-spin w-4 h-4" /> : <Check className="w-4 h-4" />}
                 Saqlash
               </button>
             </div>
@@ -1136,7 +1191,7 @@ const Sales = () => {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="text-center mb-5">
               <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <FiTrash2 className="w-6 h-6 text-red-500" />
+                <Trash className="w-6 h-6 text-red-500" />
               </div>
               <h3 className="text-base font-bold text-gray-900 mb-1">Sotuvni o'chirish</h3>
               <p className="text-sm text-gray-500">Bu amalni ortga qaytarib bo'lmaydi.</p>
@@ -1153,13 +1208,72 @@ const Sales = () => {
                 }}
                 disabled={deleteSaleMutation.isPending}
                 className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-red-600">
-                {deleteSaleMutation.isPending && <FiLoader className="animate-spin w-4 h-4" />}
+                {deleteSaleMutation.isPending && <Spinner className="animate-spin w-4 h-4" />}
                 O'chirish
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {showVariantModal && selectedProductForVariants && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-end md:items-center md:justify-center md:p-6"
+            onClick={() => setShowVariantModal(false)}
+          >
+            <div
+              className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">{selectedProductForVariants.name}</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Variantni tanlang</p>
+                </div>
+                <button onClick={() => setShowVariantModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-200">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto space-y-2">
+                {selectedProductForVariants.variants?.map((variant) => {
+                  const isUsd = (variant.currency || 'uzs').toLowerCase() === 'usd';
+                  const price = parseFloat(variant.sale_price || 0);
+                  const outOfStock = variant.quantity <= 0;
+                  return (
+                    <div
+                      key={variant.id}
+                      onClick={() => !outOfStock && addToCart(selectedProductForVariants, variant)}
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                        outOfStock
+                          ? 'opacity-50 border-gray-100 bg-gray-50 cursor-not-allowed'
+                          : 'border-gray-100 hover:border-[#1447E6] bg-white cursor-pointer hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-3">
+                        <h4 className="font-bold text-gray-800 text-sm truncate">{variant.name}</h4>
+                        {variant.barcode && <p className="text-[10px] text-gray-400 mt-0.5">{variant.barcode}</p>}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] font-bold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                            {isUsd ? `$${price.toLocaleString()}` : `${price.toLocaleString()} so'm`}
+                          </span>
+                          <span className="text-[10px] text-gray-300">&bull;</span>
+                          <span className="text-[10px] font-semibold text-gray-500">Qoldiq: {variant.quantity} {variant.unit}</span>
+                        </div>
+                      </div>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        outOfStock ? 'bg-gray-100 text-gray-400' : 'bg-blue-50 text-[#1447E6]'
+                      }`}>
+                        <Plus className="w-4 h-4" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isAddCustomerModalOpen && (

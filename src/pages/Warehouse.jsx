@@ -1,22 +1,115 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiPackage,
-  FiCheck, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight,
-  FiLayers, FiChevronRight as FiArrowRight
-} from 'react-icons/fi';
+  MagnifyingGlass, Plus, Minus, PencilSimple, Trash, X, Package,
+  Check, Spinner, WarningCircle, CaretLeft, CaretRight,
+  Stack, ArrowRight
+} from '@phosphor-icons/react';
 import {
   useProducts, useProduct, useCreateProduct, useUpdateProduct, useDeleteProduct,
   useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
-  useLowStockProducts
+  useLowStockProducts,
+  useCreateVariant, useUpdateVariant, useDeleteVariant
 } from '../hooks/useProducts';
 
 const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6] transition-all";
+const smallInputClass = "w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1447E6]/20 focus:border-[#1447E6]";
+const UNITS = ['dona', 'kg', 'litr', 'metr', 'quti', 'juft'];
 
-const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending }) => {
-  const isUzs = formData.currency === 'uzs';
-  const hasPrice = parseFloat(formData.sale_price || 0) > 0;
-  const symbol = isUzs ? "so'm" : '$';
-  const symbolClass = isUzs ? 'text-[#1447E6]' : 'text-emerald-600';
+const SearchableCategorySelect = ({ categories, selectedCategoryId, onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+  const selected = categories.find(c => c.id.toString() === selectedCategoryId?.toString());
+  const filtered = categories.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={inputClass + ' flex items-center justify-between text-left'}
+      >
+        <span className={selected ? 'text-gray-800' : 'text-gray-400'}>
+          {selected ? selected.name : 'Kategoriya tanlang...'}
+        </span>
+        <CaretRight className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+          >
+            <div className="p-2">
+              <div className="relative mb-2">
+                <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Qidirish..."
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 rounded-xl text-sm outline-none border border-gray-100 focus:border-[#1447E6]"
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-44 overflow-y-auto space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => { onSelect(''); setIsOpen(false); setSearch(''); }}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!selectedCategoryId ? 'bg-[#1447E6] text-white font-semibold' : 'text-gray-400 hover:bg-gray-50'}`}
+                >
+                  Kategoriyasiz
+                </button>
+                {filtered.map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => { onSelect(cat.id.toString()); setIsOpen(false); setSearch(''); }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${selectedCategoryId?.toString() === cat.id.toString() ? 'bg-[#1447E6] text-white font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel, isPending, onDeleteVariant }) => {
+  const variantsEndRef = useRef(null);
+
+  const addVariant = () => {
+    setFormData(fd => ({ ...fd, variants: [...(fd.variants || []), { name: '', unit: 'dona', quantity: '', currency: 'uzs', cost_price: '', sale_price: '', is_active: true }] }));
+    setTimeout(() => variantsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  };
+
+  const updateVariant = (idx, field, value) => {
+    setFormData(fd => ({ ...fd, variants: fd.variants.map((v, i) => i === idx ? { ...v, [field]: value } : v) }));
+  };
+
+  const removeVariant = (idx) => {
+    const v = formData.variants[idx];
+    if (v.id && onDeleteVariant) {
+      onDeleteVariant(v.id);
+    } else {
+      setFormData(fd => ({ ...fd, variants: fd.variants.filter((_, i) => i !== idx) }));
+    }
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -25,81 +118,103 @@ const ProductForm = ({ formData, setFormData, categories, onSubmit, submitLabel,
         <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Mahsulot nomini kiriting" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
-          <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
-            <option value="">Tanlang...</option>
-            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
-          <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className={inputClass}>
-            <option value="dona">Dona</option>
-            <option value="kg">Kg</option>
-            <option value="litr">Litr</option>
-            <option value="metr">Metr</option>
-          </select>
-        </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kategoriya</label>
+        <SearchableCategorySelect
+          categories={categories}
+          selectedCategoryId={formData.category}
+          onSelect={(val) => setFormData({ ...formData, category: val })}
+        />
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
-        <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className={inputClass} placeholder="0" />
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tavsif (ixtiyoriy)</label>
+        <textarea
+          value={formData.description || ''}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          className={inputClass + ' resize-none'}
+          rows={2}
+          placeholder="Qo'shimcha ma'lumot..."
+        />
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-2">Valyuta</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-semibold text-gray-500">Variantlar</label>
           <button
             type="button"
-            onClick={() => setFormData({ ...formData, currency: 'usd', sale_price: '', cost_price: '' })}
-            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${!isUzs ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+            onClick={addVariant}
+            className="flex items-center gap-1 text-xs font-bold text-[#1447E6] bg-blue-50 px-2.5 py-1.5 rounded-xl hover:bg-[#1447E6] hover:text-white transition-all"
           >
-            $ (USD)
-          </button>
-          <button
-            type="button"
-            onClick={() => setFormData({ ...formData, currency: 'uzs', sale_price: '', cost_price: '' })}
-            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${isUzs ? 'bg-[#1447E6] text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-          >
-            so'm (UZS)
+            <Plus className="w-3 h-3" /> Qo'shish
           </button>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
-        <div className="relative">
-          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${symbolClass}`}>{symbol}</span>
-          <input
-            type="number"
-            value={formData.cost_price}
-            onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
-            className={inputClass + (isUzs ? ' pl-12' : ' pl-7')}
-            placeholder="0"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi</label>
-        <div className="relative">
-          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${symbolClass}`}>{symbol}</span>
-          <input
-            type="number"
-            value={formData.sale_price}
-            onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-            className={inputClass + (isUzs ? ' pl-12' : ' pl-7')}
-            placeholder="0"
-          />
-        </div>
+        {(formData.variants || []).length === 0 ? (
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl py-6 text-center">
+            <p className="text-xs text-gray-400 font-medium">Hech qanday variant qo'shilmagan</p>
+            <button type="button" onClick={addVariant} className="mt-2 text-xs font-bold text-[#1447E6] hover:underline">
+              Birinchi variantni qo'shing
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {(formData.variants || []).map((variant, idx) => (
+              <div key={idx} className="bg-gray-50 rounded-2xl p-3.5 border border-gray-100 relative">
+                <button
+                  type="button"
+                  onClick={() => removeVariant(idx)}
+                  className="absolute top-2.5 right-2.5 w-6 h-6 bg-red-50 text-red-400 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <div className="space-y-2.5 pr-8">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 mb-1">Variant nomi</label>
+                      <input type="text" value={variant.name} onChange={(e) => updateVariant(idx, 'name', e.target.value)} className={smallInputClass} placeholder="masalan: Qizil" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 mb-1">Birlik</label>
+                      <select value={variant.unit} onChange={(e) => updateVariant(idx, 'unit', e.target.value)} className={smallInputClass}>
+                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 mb-1">Miqdor</label>
+                      <input type="number" value={variant.quantity} onChange={(e) => updateVariant(idx, 'quantity', e.target.value)} className={smallInputClass} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 mb-1">Valyuta</label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <button type="button" onClick={() => updateVariant(idx, 'currency', 'uzs')} className={`py-2 rounded-xl text-[10px] font-bold transition-all ${variant.currency === 'uzs' ? 'bg-[#1447E6] text-white' : 'bg-white border border-gray-200 text-gray-500'}`}>so'm</button>
+                        <button type="button" onClick={() => updateVariant(idx, 'currency', 'usd')} className={`py-2 rounded-xl text-[10px] font-bold transition-all ${variant.currency === 'usd' ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500'}`}>USD</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 mb-1">Tan narx</label>
+                      <input type="number" value={variant.cost_price} onChange={(e) => updateVariant(idx, 'cost_price', e.target.value)} className={smallInputClass} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 mb-1">Sotuv narxi</label>
+                      <input type="number" value={variant.sale_price} onChange={(e) => updateVariant(idx, 'sale_price', e.target.value)} className={smallInputClass} placeholder="0" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={variantsEndRef} />
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 pt-2">
-        <button onClick={onSubmit} disabled={isPending || !formData.name || !hasPrice} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-          {isPending && <FiLoader className="animate-spin w-4 h-4" />}
+        <button onClick={onSubmit} disabled={isPending || !formData.name} className="flex-1 px-4 py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+          {isPending && <Spinner className="animate-spin w-4 h-4" />}
           {submitLabel}
         </button>
       </div>
@@ -132,12 +247,18 @@ const Warehouse = () => {
   const [formData, setFormData] = useState({
     name: '',
     category: '',
-    quantity: '',
-    sale_price: '',
-    cost_price: '',
-    currency: 'usd',
-    unit: 'dona',
+    description: '',
+    is_active: true,
+    variants: [],
   });
+
+  const [expandedProductId, setExpandedProductId] = useState(null);
+  const [showAddVariantModal, setShowAddVariantModal] = useState(false);
+  const [showEditVariantModal, setShowEditVariantModal] = useState(false);
+  const [showDeleteVariantModal, setShowDeleteVariantModal] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [variantProductId, setVariantProductId] = useState(null);
+  const [variantFormData, setVariantFormData] = useState({ name: '', unit: 'dona', quantity: '', currency: 'uzs', cost_price: '', sale_price: '' });
 
   useEffect(() => { setPage(1); }, [searchTerm]);
 
@@ -152,11 +273,18 @@ const Warehouse = () => {
       setFormData({
         name: singleProduct.name || '',
         category: singleProduct.category?.toString() || '',
-        quantity: singleProduct.quantity?.toString() || '0',
-        sale_price: singleProduct.sale_price || '',
-        cost_price: singleProduct.cost_price || '',
-        currency: singleProduct.currency || 'uzs',
-        unit: singleProduct.unit || 'dona',
+        description: singleProduct.description || '',
+        is_active: singleProduct.is_active ?? true,
+        variants: (singleProduct.variants || []).map(v => ({
+          id: v.id,
+          name: v.name || '',
+          unit: v.unit || 'dona',
+          quantity: v.quantity?.toString() || '',
+          currency: v.currency || 'uzs',
+          cost_price: v.cost_price || '',
+          sale_price: v.sale_price || '',
+          is_active: v.is_active ?? true,
+        })),
       });
     }
   }, [singleProduct, showEditModal]);
@@ -164,6 +292,9 @@ const Warehouse = () => {
   const createProductMutation = useCreateProduct();
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
+  const createVariantMutation = useCreateVariant();
+  const updateVariantMutation = useUpdateVariant();
+  const deleteVariantMutation = useDeleteVariant();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
   const deleteCategoryMutation = useDeleteCategory();
@@ -225,24 +356,31 @@ const Warehouse = () => {
 
   const getStatusCfg = (status) => statusConfig[status] || statusConfig.good;
 
-  const buildProductPayload = () => {
-    const payload = {
-      name: formData.name,
-      category: formData.category ? parseInt(formData.category) : null,
-      quantity: parseInt(formData.quantity) || 0,
-      sale_price: formData.sale_price || '0',
-      currency: formData.currency,
-      unit: formData.unit,
-    };
-    if (parseFloat(formData.cost_price) > 0) {
-      payload.cost_price = formData.cost_price;
-    }
-    return payload;
-  };
+  const buildProductPayload = () => ({
+    name: formData.name,
+    category: formData.category ? parseInt(formData.category) : null,
+    description: formData.description || '',
+    is_active: formData.is_active ?? true,
+  });
+
+  const buildVariantPayload = (v) => ({
+    name: v.name,
+    unit: v.unit || 'dona',
+    quantity: parseInt(v.quantity) || 0,
+    currency: v.currency || 'uzs',
+    cost_price: v.cost_price || '0',
+    sale_price: v.sale_price || '0',
+    is_active: v.is_active ?? true,
+  });
 
   const handleAddProduct = async () => {
     try {
-      await createProductMutation.mutateAsync(buildProductPayload());
+      const product = await createProductMutation.mutateAsync(buildProductPayload());
+      for (const v of (formData.variants || [])) {
+        if (v.name) {
+          await createVariantMutation.mutateAsync({ productId: product.id, data: buildVariantPayload(v) });
+        }
+      }
       setShowAddModal(false);
       resetForm();
     } catch (error) {}
@@ -251,6 +389,14 @@ const Warehouse = () => {
   const handleEditProduct = async () => {
     try {
       await updateProductMutation.mutateAsync({ id: selectedProduct.id, data: buildProductPayload() });
+      for (const v of (formData.variants || [])) {
+        if (!v.name) continue;
+        if (v.id) {
+          await updateVariantMutation.mutateAsync({ id: v.id, data: buildVariantPayload(v) });
+        } else {
+          await createVariantMutation.mutateAsync({ productId: selectedProduct.id, data: buildVariantPayload(v) });
+        }
+      }
       setShowEditModal(false);
       resetForm();
     } catch (error) {}
@@ -264,16 +410,21 @@ const Warehouse = () => {
     } catch (error) {}
   };
 
+  const handleDeleteVariantFromForm = async (variantId) => {
+    try {
+      await deleteVariantMutation.mutateAsync(variantId);
+      setFormData(fd => ({ ...fd, variants: fd.variants.filter(v => v.id !== variantId) }));
+    } catch (error) {}
+  };
+
   const openEditModal = (product) => {
     setSelectedProduct(product);
     setFormData({
       name: product.name || '',
       category: product.category?.toString() || '',
-      quantity: product.quantity?.toString() || '0',
-      sale_price: product.sale_price || '',
-      cost_price: product.cost_price || '',
-      currency: product.currency || 'uzs',
-      unit: product.unit || 'dona',
+      description: product.description || '',
+      is_active: product.is_active ?? true,
+      variants: [],
     });
     setShowEditModal(true);
   };
@@ -284,8 +435,54 @@ const Warehouse = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', quantity: '', sale_price: '', cost_price: '', currency: 'uzs', unit: 'dona' });
+    setFormData({ name: '', category: '', description: '', is_active: true, variants: [] });
     setSelectedProduct(null);
+  };
+
+  const openAddVariantModal = (productId) => {
+    setVariantProductId(productId);
+    setVariantFormData({ name: '', unit: 'dona', quantity: '', currency: 'uzs', cost_price: '', sale_price: '' });
+    setShowAddVariantModal(true);
+  };
+
+  const openEditVariantModal = (variant) => {
+    setSelectedVariant(variant);
+    setVariantFormData({
+      name: variant.name || '',
+      unit: variant.unit || 'dona',
+      quantity: variant.quantity?.toString() || '',
+      currency: variant.currency || 'uzs',
+      cost_price: variant.cost_price || '',
+      sale_price: variant.sale_price || '',
+    });
+    setShowEditVariantModal(true);
+  };
+
+  const openDeleteVariantModal = (variant) => {
+    setSelectedVariant(variant);
+    setShowDeleteVariantModal(true);
+  };
+
+  const handleAddVariantDirect = async () => {
+    try {
+      await createVariantMutation.mutateAsync({ productId: variantProductId, data: { ...variantFormData, quantity: parseInt(variantFormData.quantity) || 0, is_active: true } });
+      setShowAddVariantModal(false);
+    } catch (error) {}
+  };
+
+  const handleEditVariantDirect = async () => {
+    try {
+      await updateVariantMutation.mutateAsync({ id: selectedVariant.id, data: { ...variantFormData, quantity: parseInt(variantFormData.quantity) || 0 } });
+      setShowEditVariantModal(false);
+    } catch (error) {}
+  };
+
+  const handleDeleteVariantDirect = async () => {
+    try {
+      await deleteVariantMutation.mutateAsync(selectedVariant.id);
+      setShowDeleteVariantModal(false);
+      setSelectedVariant(null);
+    } catch (error) {}
   };
 
   const handleAddCategory = async () => {
@@ -327,7 +524,7 @@ const Warehouse = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] pb-32 md:pb-8">
+    <div className="min-h-screen bg-[#f8fafc] pb-32 md:pb-8">
       {/* White header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="px-5 md:px-8 py-5 max-w-6xl mx-auto">
@@ -347,7 +544,7 @@ const Warehouse = () => {
                 onClick={() => setShowAddModal(true)}
                 className="px-3 py-5 bg-[#1447E6] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
               >
-                <FiPlus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5" />
                 Qo'shish
               </button>
             </div>
@@ -371,18 +568,18 @@ const Warehouse = () => {
             className="w-full mb-4 flex items-center gap-3 bg-gradient-to-r from-[#1447E6] to-[#0F3CC7] text-white rounded-2xl px-4 py-3 shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
           >
             <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
-              <FiLayers className="w-4 h-4" />
+              <Stack className="w-4 h-4" />
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-bold leading-tight">Kategoriyalar bo'yicha</p>
               <p className="text-[11px] text-blue-200">{categoryStats.length} ta kategoriya • {categoryTotals.qty.toLocaleString()} dona qoldiq</p>
             </div>
-            <FiArrowRight className="w-4 h-4 text-blue-200 shrink-0" />
+            <ArrowRight className="w-4 h-4 text-blue-200 shrink-0" />
           </button>
 
           {/* Search */}
           <div className="relative">
-            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               placeholder="Mahsulotlarni qidirish..."
@@ -398,12 +595,12 @@ const Warehouse = () => {
       <div className="px-4 md:px-8 py-4 max-w-6xl mx-auto">
         {productsLoading ? (
           <div className="flex items-center justify-center py-20">
-            <FiLoader className="w-8 h-8 text-[#1447E6] animate-spin" />
+            <Spinner className="w-8 h-8 text-[#1447E6] animate-spin" />
           </div>
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
             <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
-              <FiPackage className="w-8 h-8 text-gray-300" />
+              <Package className="w-8 h-8 text-gray-300" />
             </div>
             <h3 className="text-base font-bold text-gray-900 mb-1">Mahsulot topilmadi</h3>
             <p className="text-gray-400 text-sm text-center max-w-[220px]">
@@ -414,7 +611,7 @@ const Warehouse = () => {
                 onClick={() => setShowAddModal(true)}
                 className="mt-5 px-6 py-3 bg-[#1447E6] text-white rounded-2xl font-bold flex items-center gap-2 shadow-sm text-sm"
               >
-                <FiPlus className="w-4 h-4" /> Mahsulot qo'shish
+                <Plus className="w-4 h-4" /> Mahsulot qo'shish
               </button>
             )}
           </div>
@@ -422,57 +619,100 @@ const Warehouse = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {products.map((product) => {
               const sc = getStatusCfg(product.status);
-              const saleUzs = parseFloat(product.sale_price_uzs || (product.currency === 'uzs' ? product.sale_price : '') || 0);
-              const saleUsd = parseFloat(product.sale_price_usd || (product.currency === 'usd' ? product.sale_price : '') || 0);
+              const variants = product.variants || [];
+              const isExpanded = expandedProductId === product.id;
               return (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3.5 flex flex-col gap-2.5"
-                >
-                  {/* Top row: status dot + name + actions */}
-                  <div className="flex items-start gap-2.5">
+                <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  {/* Header */}
+                  <div className="px-4 py-3.5 flex items-start gap-2.5">
                     <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${sc.dot}`} />
                     <h3 className="text-sm font-bold text-gray-900 flex-1 leading-snug">{product.name}</h3>
                     <div className="flex gap-1.5 shrink-0">
                       <button
-                        onClick={() => openEditModal(product)}
+                        onClick={() => openAddVariantModal(product.id)}
+                        title="Variant qo'shish"
                         className="w-8 h-8 bg-blue-50 text-[#1447E6] rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
                       >
-                        <FiEdit2 className="w-3.5 h-3.5" />
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => openEditModal(product)}
+                        className="w-8 h-8 bg-gray-50 text-gray-500 rounded-xl flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all"
+                      >
+                        <PencilSimple className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => openDeleteModal(product)}
                         className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                       >
-                        <FiTrash2 className="w-3.5 h-3.5" />
+                        <Trash className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Bottom row: badges + price + quantity */}
-                  <div className="flex items-center gap-2 flex-wrap pl-5">
+                  {/* Badges + variant toggle */}
+                  <div className="px-4 pb-3 flex items-center gap-2 pl-9">
                     {product.category_name && (
                       <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">{product.category_name}</span>
                     )}
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${sc.bg} ${sc.text}`}>{sc.label}</span>
-
-                    <div className="ml-auto flex items-center gap-2">
-                      {saleUzs > 0 && (
-                        <p className="text-sm font-black text-[#1447E6] leading-tight">
-                          {saleUzs.toLocaleString()} so'm
-                        </p>
-                      )}
-                      {saleUsd > 0 && (
-                        <p className="text-sm font-black text-emerald-600 leading-tight">
-                          ${saleUsd.toLocaleString()}
-                        </p>
-                      )}
-                      <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2.5 py-1">
-                        <p className="text-sm font-black text-gray-900 leading-tight">{product.quantity}</p>
+                    {variants.length > 0 && (
+                      <button
+                        onClick={() => setExpandedProductId(isExpanded ? null : product.id)}
+                        className="ml-auto flex items-center gap-1 text-[10px] font-bold text-[#1447E6] bg-blue-50 px-2 py-1 rounded-lg hover:bg-[#1447E6] hover:text-white transition-all"
+                      >
+                        {variants.length} variant
+                        <CaretRight className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                      </button>
+                    )}
+                    {variants.length === 0 && (
+                      <div className="ml-auto text-center bg-gray-50 rounded-xl px-2.5 py-1">
+                        <p className="text-sm font-black text-gray-900 leading-tight">{product.quantity ?? 0}</p>
                         <p className="text-[9px] text-gray-400">{product.unit || 'dona'}</p>
                       </div>
-                    </div>
+                    )}
                   </div>
+
+                  {/* Expanded variants */}
+                  <AnimatePresence>
+                    {isExpanded && variants.length > 0 && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden border-t border-gray-100"
+                      >
+                        <div className="divide-y divide-gray-50">
+                          {variants.map(v => {
+                            const isUsd = (v.currency || 'uzs').toLowerCase() === 'usd';
+                            return (
+                              <div key={v.id} className="px-4 py-2.5 flex items-center gap-2 pl-9">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-gray-800 truncate">{v.name || '—'}</p>
+                                  <p className={`text-xs font-bold ${isUsd ? 'text-emerald-600' : 'text-[#1447E6]'}`}>
+                                    {isUsd ? `$${parseFloat(v.sale_price || 0).toLocaleString()}` : `${parseFloat(v.sale_price || 0).toLocaleString()} so'm`}
+                                  </p>
+                                </div>
+                                <div className="text-center bg-gray-50 rounded-xl px-2 py-1 shrink-0">
+                                  <p className="text-xs font-black text-gray-900">{v.quantity}</p>
+                                  <p className="text-[9px] text-gray-400">{v.unit || 'dona'}</p>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                  <button onClick={() => openEditVariantModal(v)} className="w-7 h-7 bg-blue-50 text-[#1447E6] rounded-lg flex items-center justify-center hover:bg-[#1447E6] hover:text-white transition-all">
+                                    <PencilSimple className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => openDeleteVariantModal(v)} className="w-7 h-7 bg-red-50 text-red-400 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+                                    <Trash className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -487,7 +727,7 @@ const Warehouse = () => {
               disabled={page === 1 || productsLoading}
               className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
             >
-              <FiChevronLeft className="w-4 h-4" /> Oldingi
+              <CaretLeft className="w-4 h-4" /> Oldingi
             </button>
             <span className="text-sm font-bold text-gray-600">
               {page} / {totalProductPages}
@@ -498,7 +738,7 @@ const Warehouse = () => {
               disabled={page === totalProductPages || productsLoading}
               className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-[#1447E6] hover:text-white transition-all disabled:opacity-30"
             >
-              Keyingi <FiChevronRight className="w-4 h-4" />
+              Keyingi <CaretRight className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -511,10 +751,10 @@ const Warehouse = () => {
             <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Mahsulot qo'shish</h2>
               <button onClick={() => { setShowAddModal(false); resetForm(); }} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
-                <FiX className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleAddProduct} submitLabel="Saqlash" isPending={createProductMutation.isPending} />
+            <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleAddProduct} submitLabel="Saqlash" isPending={createProductMutation.isPending || createVariantMutation.isPending} />
           </div>
         </div>
       )}
@@ -526,16 +766,16 @@ const Warehouse = () => {
             <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Mahsulotni tahrirlash</h2>
               <button onClick={() => { setShowEditModal(false); resetForm(); }} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
-                <FiX className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             {productLoading ? (
               <div className="py-16 flex flex-col items-center justify-center text-gray-400">
-                <FiLoader className="w-8 h-8 animate-spin mb-3" />
+                <Spinner className="w-8 h-8 animate-spin mb-3" />
                 <p className="text-sm">Ma'lumotlar yuklanmoqda...</p>
               </div>
             ) : (
-              <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleEditProduct} submitLabel="Yangilash" isPending={updateProductMutation.isPending} />
+              <ProductForm formData={formData} setFormData={setFormData} categories={categories} onSubmit={handleEditProduct} submitLabel="Yangilash" isPending={updateProductMutation.isPending || createVariantMutation.isPending || updateVariantMutation.isPending} onDeleteVariant={handleDeleteVariantFromForm} />
             )}
           </div>
         </div>
@@ -547,7 +787,7 @@ const Warehouse = () => {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="text-center mb-5">
               <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <FiTrash2 className="w-6 h-6 text-red-500" />
+                <Trash className="w-6 h-6 text-red-500" />
               </div>
               <h3 className="text-base font-bold text-gray-900 mb-1">Mahsulotni o'chirish</h3>
               <p className="text-sm text-gray-500">"{selectedProduct?.name}" mahsulotini o'chirmoqchimisiz?</p>
@@ -561,7 +801,7 @@ const Warehouse = () => {
                 disabled={deleteProductMutation.isPending}
                 className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-red-600"
               >
-                {deleteProductMutation.isPending && <FiLoader className="animate-spin w-4 h-4" />}
+                {deleteProductMutation.isPending && <Spinner className="animate-spin w-4 h-4" />}
                 O'chirish
               </button>
             </div>
@@ -572,7 +812,7 @@ const Warehouse = () => {
       {/* Category Stats Modal */}
       {showCategoryStats && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-end md:items-center md:justify-center" onClick={() => { setShowCategoryStats(false); setSelectedCategory(null); }}>
-          <div className="bg-[#F0F4FF] rounded-t-3xl md:rounded-3xl w-full md:max-w-lg max-h-[88vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#f8fafc] rounded-t-3xl md:rounded-3xl w-full md:max-w-lg max-h-[88vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {/* Modal header */}
             <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-6 pb-5 shrink-0 relative overflow-hidden">
               <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
@@ -583,11 +823,11 @@ const Warehouse = () => {
                       onClick={() => setSelectedCategory(null)}
                       className="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center text-white hover:bg-white/25 transition-colors shrink-0"
                     >
-                      <FiChevronLeft className="w-5 h-5" />
+                      <CaretLeft className="w-5 h-5" />
                     </button>
                   ) : (
                     <div className="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center shrink-0">
-                      <FiLayers className="w-5 h-5 text-white" />
+                      <Stack className="w-5 h-5 text-white" />
                     </div>
                   )}
                   <div className="min-w-0">
@@ -605,7 +845,7 @@ const Warehouse = () => {
                   onClick={() => { setShowCategoryStats(false); setSelectedCategory(null); }}
                   className="w-9 h-9 bg-white/15 text-white rounded-xl flex items-center justify-center hover:bg-white/25 transition-colors shrink-0"
                 >
-                  <FiX className="w-5 h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -634,10 +874,10 @@ const Warehouse = () => {
 
                 {/* Products in category */}
                 {catProductsLoading ? (
-                  <div className="py-10 flex justify-center"><FiLoader className="w-7 h-7 text-[#1447E6] animate-spin" /></div>
+                  <div className="py-10 flex justify-center"><Spinner className="w-7 h-7 text-[#1447E6] animate-spin" /></div>
                 ) : (catProductsData?.results || []).length === 0 ? (
                   <div className="py-12 text-center text-gray-400">
-                    <FiPackage className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
                     <p className="text-sm">Mahsulot topilmadi</p>
                   </div>
                 ) : (catProductsData?.results || []).map((p) => {
@@ -661,7 +901,7 @@ const Warehouse = () => {
                         <p className="text-sm font-black text-gray-900 leading-tight">{p.quantity}</p>
                         <p className="text-[9px] text-gray-400">{p.unit || 'dona'}</p>
                       </div>
-                      <FiEdit2 className="w-4 h-4 text-gray-300 shrink-0" />
+                      <PencilSimple className="w-4 h-4 text-gray-300 shrink-0" />
                     </button>
                   );
                 })}
@@ -696,7 +936,7 @@ const Warehouse = () => {
 
                 {categoryStats.length === 0 ? (
                   <div className="py-16 text-center text-gray-400">
-                    <FiLayers className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <Stack className="w-10 h-10 mx-auto mb-3 opacity-20" />
                     <p className="text-sm">Kategoriya topilmadi</p>
                   </div>
                 ) : categoryStats.map((cat) => {
@@ -708,7 +948,7 @@ const Warehouse = () => {
                       className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 text-left hover:border-[#1447E6] active:scale-[0.99] transition-all"
                     >
                       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${cat.lowStock > 0 || isEmpty ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-[#1447E6]'}`}>
-                        <FiPackage className="w-5 h-5" />
+                        <Package className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-gray-900 truncate">{cat.name}</p>
@@ -718,7 +958,7 @@ const Warehouse = () => {
                           {cat.saleUzs > 0 && <span className="text-[10px] font-bold text-[#1447E6]">{cat.saleUzs.toLocaleString()} so'm</span>}
                           {cat.lowStock > 0 && (
                             <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-lg flex items-center gap-1">
-                              <FiAlertCircle className="w-2.5 h-2.5" /> {cat.lowStock}
+                              <WarningCircle className="w-2.5 h-2.5" /> {cat.lowStock}
                             </span>
                           )}
                         </div>
@@ -728,7 +968,7 @@ const Warehouse = () => {
                           <p className={`text-lg font-black leading-tight ${isEmpty ? 'text-red-500' : 'text-gray-900'}`}>{cat.quantity.toLocaleString()}</p>
                           <p className="text-[10px] text-gray-400">dona</p>
                         </div>
-                        <FiArrowRight className="w-4 h-4 text-gray-300" />
+                        <ArrowRight className="w-4 h-4 text-gray-300" />
                       </div>
                     </button>
                   );
@@ -752,7 +992,7 @@ const Warehouse = () => {
                 onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }}
                 className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500"
               >
-                <FiX className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -769,14 +1009,14 @@ const Warehouse = () => {
                 disabled={createCategoryMutation.isPending}
                 className="px-4 py-2.5 bg-[#1447E6] text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50"
               >
-                {createCategoryMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiPlus className="w-4 h-4" />}
+                {createCategoryMutation.isPending ? <Spinner className="animate-spin w-4 h-4" /> : <Plus className="w-4 h-4" />}
               </button>
             </div>
 
             <div className="max-h-72 overflow-y-auto space-y-2">
               {categoriesLoading ? (
                 <div className="flex justify-center py-4">
-                  <FiLoader className="animate-spin text-gray-400" />
+                  <Spinner className="animate-spin text-gray-400" />
                 </div>
               ) : categories.map((cat) => (
                 <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-transparent hover:border-gray-100 transition-all">
@@ -794,7 +1034,7 @@ const Warehouse = () => {
                         disabled={updateCategoryMutation.isPending}
                         className="w-7 h-7 bg-[#1447E6] text-white rounded-lg flex items-center justify-center"
                       >
-                        {updateCategoryMutation.isPending ? <FiLoader className="animate-spin w-3 h-3" /> : <FiCheck className="w-3 h-3" />}
+                        {updateCategoryMutation.isPending ? <Spinner className="animate-spin w-3 h-3" /> : <Check className="w-3 h-3" />}
                       </button>
                     </div>
                   ) : (
@@ -804,10 +1044,10 @@ const Warehouse = () => {
                       </span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => handleStartEdit(cat)} className="w-7 h-7 text-gray-400 hover:text-[#1447E6] hover:bg-blue-50 rounded-lg transition-all flex items-center justify-center">
-                          <FiEdit2 className="w-3.5 h-3.5" />
+                          <PencilSimple className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => handleDeleteCategory(cat)} className="w-7 h-7 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex items-center justify-center">
-                          <FiTrash2 className="w-3.5 h-3.5" />
+                          <Trash className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </>
@@ -819,13 +1059,141 @@ const Warehouse = () => {
         </div>
       )}
 
+      {/* Add Variant Modal */}
+      {showAddVariantModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-end md:items-center md:justify-center" onClick={() => setShowAddVariantModal(false)}>
+          <div className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900">Variant qo'shish</h3>
+              <button onClick={() => setShowAddVariantModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Variant nomi</label>
+                <input type="text" value={variantFormData.name} onChange={(e) => setVariantFormData(fd => ({ ...fd, name: e.target.value }))} className={inputClass} placeholder="masalan: Qizil, XL" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
+                  <select value={variantFormData.unit} onChange={(e) => setVariantFormData(fd => ({ ...fd, unit: e.target.value }))} className={inputClass}>
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
+                  <input type="number" value={variantFormData.quantity} onChange={(e) => setVariantFormData(fd => ({ ...fd, quantity: e.target.value }))} className={inputClass} placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Valyuta</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setVariantFormData(fd => ({ ...fd, currency: 'uzs' }))} className={`py-2.5 rounded-xl font-bold text-sm transition-all ${variantFormData.currency === 'uzs' ? 'bg-[#1447E6] text-white' : 'bg-gray-100 text-gray-500'}`}>so'm</button>
+                  <button type="button" onClick={() => setVariantFormData(fd => ({ ...fd, currency: 'usd' }))} className={`py-2.5 rounded-xl font-bold text-sm transition-all ${variantFormData.currency === 'usd' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>USD</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
+                  <input type="number" value={variantFormData.cost_price} onChange={(e) => setVariantFormData(fd => ({ ...fd, cost_price: e.target.value }))} className={inputClass} placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi</label>
+                  <input type="number" value={variantFormData.sale_price} onChange={(e) => setVariantFormData(fd => ({ ...fd, sale_price: e.target.value }))} className={inputClass} placeholder="0" />
+                </div>
+              </div>
+              <button onClick={handleAddVariantDirect} disabled={createVariantMutation.isPending || !variantFormData.name} className="w-full py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-blue-700 mt-2">
+                {createVariantMutation.isPending && <Spinner className="animate-spin w-4 h-4" />}
+                Qo'shish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Variant Modal */}
+      {showEditVariantModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-end md:items-center md:justify-center" onClick={() => setShowEditVariantModal(false)}>
+          <div className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900">Variantni tahrirlash</h3>
+              <button onClick={() => setShowEditVariantModal(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Variant nomi</label>
+                <input type="text" value={variantFormData.name} onChange={(e) => setVariantFormData(fd => ({ ...fd, name: e.target.value }))} className={inputClass} placeholder="masalan: Qizil, XL" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Birlik</label>
+                  <select value={variantFormData.unit} onChange={(e) => setVariantFormData(fd => ({ ...fd, unit: e.target.value }))} className={inputClass}>
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Miqdor</label>
+                  <input type="number" value={variantFormData.quantity} onChange={(e) => setVariantFormData(fd => ({ ...fd, quantity: e.target.value }))} className={inputClass} placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Valyuta</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setVariantFormData(fd => ({ ...fd, currency: 'uzs' }))} className={`py-2.5 rounded-xl font-bold text-sm transition-all ${variantFormData.currency === 'uzs' ? 'bg-[#1447E6] text-white' : 'bg-gray-100 text-gray-500'}`}>so'm</button>
+                  <button type="button" onClick={() => setVariantFormData(fd => ({ ...fd, currency: 'usd' }))} className={`py-2.5 rounded-xl font-bold text-sm transition-all ${variantFormData.currency === 'usd' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>USD</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tan narx</label>
+                  <input type="number" value={variantFormData.cost_price} onChange={(e) => setVariantFormData(fd => ({ ...fd, cost_price: e.target.value }))} className={inputClass} placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sotuv narxi</label>
+                  <input type="number" value={variantFormData.sale_price} onChange={(e) => setVariantFormData(fd => ({ ...fd, sale_price: e.target.value }))} className={inputClass} placeholder="0" />
+                </div>
+              </div>
+              <button onClick={handleEditVariantDirect} disabled={updateVariantMutation.isPending || !variantFormData.name} className="w-full py-3.5 bg-[#1447E6] text-white rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-blue-700 mt-2">
+                {updateVariantMutation.isPending && <Spinner className="animate-spin w-4 h-4" />}
+                Yangilash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Variant Confirm */}
+      {showDeleteVariantModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center px-4" onClick={() => setShowDeleteVariantModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <Trash className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-1">Variantni o'chirish</h3>
+              <p className="text-sm text-gray-500">"{selectedVariant?.name}" variantini o'chirmoqchimisiz?</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteVariantModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm">Bekor</button>
+              <button onClick={handleDeleteVariantDirect} disabled={deleteVariantMutation.isPending} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-red-600">
+                {deleteVariantMutation.isPending && <Spinner className="animate-spin w-4 h-4" />}
+                O'chirish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Category Delete Confirm */}
       {showCatDeleteConfirm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[80] flex items-center justify-center px-4" onClick={() => setShowCatDeleteConfirm(false)}>
           <div className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl border border-gray-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-center">
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FiAlertCircle className="w-8 h-8 text-red-500" />
+                <WarningCircle className="w-8 h-8 text-red-500" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Kategoriyani o'chirish?</h3>
               <p className="text-sm text-gray-400 mb-6 leading-relaxed">
@@ -843,7 +1211,7 @@ const Warehouse = () => {
                   disabled={deleteCategoryMutation.isPending}
                   className="flex-1 py-3.5 bg-red-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-600"
                 >
-                  {deleteCategoryMutation.isPending && <FiLoader className="animate-spin w-4 h-4" />}
+                  {deleteCategoryMutation.isPending && <Spinner className="animate-spin w-4 h-4" />}
                   Ha, o'chirish
                 </button>
               </div>

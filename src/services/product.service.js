@@ -103,8 +103,12 @@ const productService = {
    * @returns {Promise<Product[]>}
    */
   getProductsForSale: async (params = {}) => {
-    const response = await api.get('/api/products/', { params });
-    return response.data;
+    const response = await api.get('/api/products/for_sale/', { params });
+    const data = response.data;
+    if (Array.isArray(data)) return { results: data, count: data.length };
+    if (data?.results) return data;
+    if (data?.id) return { results: [data], count: 1 };
+    return data;
   },
 
   /**
@@ -114,6 +118,30 @@ const productService = {
   getLowStockProducts: async () => {
     const response = await api.get('/api/products/low_stock/');
     return response.data;
+  },
+
+  getVariants: async (params) => {
+    const response = await api.get('/api/products/variants/', { params });
+    return response.data;
+  },
+
+  addVariantToProduct: async (productId, data) => {
+    const response = await api.post(`/api/products/${productId}/variants/add/`, data);
+    return response.data;
+  },
+
+  getVariant: async (id) => {
+    const response = await api.get(`/api/products/variants/${id}/`);
+    return response.data;
+  },
+
+  updateVariant: async (id, data) => {
+    const response = await api.patch(`/api/products/variants/${id}/`, data);
+    return response.data;
+  },
+
+  deleteVariant: async (id) => {
+    await api.delete(`/api/products/variants/${id}/`);
   }
 };
 

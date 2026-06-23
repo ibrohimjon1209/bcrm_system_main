@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import {
-  FiPlus, FiSearch, FiPhone, FiEdit,
-  FiTrash2, FiMessageCircle, FiFileText, FiX, FiCheckCircle,
-  FiMapPin, FiCalendar, FiCreditCard, FiLoader, FiUsers,
-  FiChevronDown, FiChevronUp
-} from 'react-icons/fi';
-import { FiSend } from 'react-icons/fi';
+  Plus, MagnifyingGlass, Phone, PencilSimple,
+  Trash, ChatCircle, FileText, X, CheckCircle,
+  MapPin, Calendar, CreditCard, Spinner, Users,
+  CaretDown, CaretUp, PaperPlaneRight
+} from '@phosphor-icons/react';
 import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder } from '../hooks/useCustomers';
 import { toast } from 'react-toastify';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
@@ -62,7 +61,7 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
         >
           <motion.div style={{ scale: editScale }} className="flex flex-col items-center">
             <div className="bg-white/20 p-2.5 rounded-full mb-1">
-              <FiEdit className="text-white w-4 h-4" />
+              <PencilSimple className="text-white w-4 h-4" />
             </div>
             <span className="text-[10px] text-white font-bold">Tahrir</span>
           </motion.div>
@@ -73,7 +72,7 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
         >
           <motion.div style={{ scale: deleteScale }} className="flex flex-col items-center">
             <div className="bg-white/20 p-2.5 rounded-full mb-1">
-              <FiTrash2 className="text-white w-4 h-4" />
+              <Trash className="text-white w-4 h-4" />
             </div>
             <span className="text-[10px] text-white font-bold">O'chirish</span>
           </motion.div>
@@ -102,7 +101,7 @@ const SwipeableCustomerCard = ({ customer, onClick, onEdit, onDelete }) => {
               <h3 className="font-bold text-sm text-gray-900 truncate">{customer.name}</h3>
             </div>
             <div className="flex items-center gap-1 text-gray-400 text-xs">
-              <FiPhone className="w-3 h-3" />
+              <Phone className="w-3 h-3" />
               <span>{customer.phone}</span>
             </div>
           </div>
@@ -176,7 +175,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
       initial={{ opacity: 0, y: 80 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 80 }}
-      className="fixed inset-0 z-[100] bg-[#F0F4FF] flex flex-col"
+      className="fixed inset-0 z-[100] bg-[#f8fafc] flex flex-col"
     >
       {/* Header */}
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 pt-12 pb-20 relative overflow-hidden">
@@ -184,14 +183,14 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
         <div className="absolute top-12 -right-4 w-20 h-20 bg-white/5 rounded-full" />
         <div className="flex items-center justify-between mb-4 relative z-10">
           <button onClick={onClose} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-colors">
-            <FiX className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
             <button onClick={() => onEdit(customer)} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-colors">
-              <FiEdit className="w-4 h-4" />
+              <PencilSimple className="w-4 h-4" />
             </button>
             <button onClick={() => onDelete(customer.id)} className="w-9 h-9 bg-red-500/20 text-red-100 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">
-              <FiTrash2 className="w-5 h-5" />
+              <Trash className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -207,7 +206,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-gray-900 truncate">{detail.name}</h2>
             <div className="flex items-center gap-1 text-gray-500 text-sm mt-0.5">
-              <FiPhone className="w-3.5 h-3.5" />
+              <Phone className="w-3.5 h-3.5" />
               <span>{detail.phone}</span>
             </div>
           </div>
@@ -245,7 +244,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
           <div className="flex items-center gap-3 p-4">
             <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-              <FiMapPin className="w-4 h-4" />
+              <MapPin className="w-4 h-4" />
             </div>
             <div>
               <span className="text-[10px] text-gray-400 block">Manzil</span>
@@ -259,7 +258,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-                  <FiCalendar className="w-4 h-4" />
+                  <Calendar className="w-4 h-4" />
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 block">Savdolar tarixi</span>
@@ -267,7 +266,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
                 </div>
               </div>
               <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
-                {showHistory ? <FiChevronUp className="w-4 h-4 text-gray-500" /> : <FiChevronDown className="w-4 h-4 text-gray-500" />}
+                {showHistory ? <CaretUp className="w-4 h-4 text-gray-500" /> : <CaretDown className="w-4 h-4 text-gray-500" />}
               </div>
             </button>
             <AnimatePresence>
@@ -280,7 +279,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
                 >
                   <div className="pt-4 mt-2 border-t border-gray-100 space-y-3">
                     {historyLoading ? (
-                      <div className="py-4 flex justify-center"><FiLoader className="w-6 h-6 text-[#1447E6] animate-spin" /></div>
+                      <div className="py-4 flex justify-center"><Spinner className="w-6 h-6 text-[#1447E6] animate-spin" /></div>
                     ) : salesHistory.length > 0 ? (
                       salesHistory.map(sale => (
                         <div key={sale.id} className="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
@@ -307,7 +306,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
           {detail.note && (
             <div className="flex items-center gap-3 p-4">
               <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 shrink-0">
-                <FiFileText className="w-4 h-4" />
+                <FileText className="w-4 h-4" />
               </div>
               <div className="flex-1">
                 <span className="text-[10px] text-gray-400 block">Eslatma</span>
@@ -319,7 +318,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
           {hasDebt && debtDueDate && (
             <div className="flex items-center gap-3 p-4">
               <div className={`w-9 h-9 ${isDebtOverdue ? 'bg-red-50' : 'bg-orange-50'} rounded-xl flex items-center justify-center shrink-0`}>
-                <FiCalendar className={`w-4 h-4 ${isDebtOverdue ? 'text-red-400' : 'text-orange-400'}`} />
+                <Calendar className={`w-4 h-4 ${isDebtOverdue ? 'text-red-400' : 'text-orange-400'}`} />
               </div>
               <div className="flex-1">
                 <span className="text-[10px] text-gray-400 block">Qarz to'lash sanasi</span>
@@ -335,7 +334,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
 
           <div className="flex items-center gap-3 px-4 py-3">
             <div className={`w-9 h-9 ${isLinked ? 'bg-blue-50' : 'bg-gray-50'} rounded-xl flex items-center justify-center shrink-0`}>
-              <FiMessageCircle className={`w-4 h-4 ${isLinked ? 'text-blue-500' : 'text-gray-400'}`} />
+              <ChatCircle className={`w-4 h-4 ${isLinked ? 'text-blue-500' : 'text-gray-400'}`} />
             </div>
             <div>
               <span className="text-[10px] text-gray-400 block">Telegram</span>
@@ -399,7 +398,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
                     disabled={payDebtMutation.isPending}
                     className="py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    {payDebtMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiCheckCircle className="w-4 h-4" />}
+                    {payDebtMutation.isPending ? <Spinner className="animate-spin w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                     To'lash
                   </button>
                 </div>
@@ -413,14 +412,14 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
                   }}
                   className="bg-emerald-600 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm"
                 >
-                  <FiCreditCard className="w-4 h-4" /> Qarz To'lash
+                  <CreditCard className="w-4 h-4" /> Qarz To'lash
                 </button>
                 <button
                   onClick={handleSendReminder}
                   disabled={sendReminderMutation.isPending}
                   className="bg-orange-500 text-white rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                 >
-                  {sendReminderMutation.isPending ? <FiLoader className="animate-spin w-4 h-4" /> : <FiSend className="w-4 h-4" />}
+                  {sendReminderMutation.isPending ? <Spinner className="animate-spin w-4 h-4" /> : <PaperPlaneRight className="w-4 h-4" />}
                   Eslatma
                 </button>
               </div>
@@ -472,7 +471,7 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Mijoz tahrirlash' : "Mijoz qo'shish"}</h2>
           <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
-            <FiX className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -553,7 +552,7 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
             disabled={isPending}
             className="w-full bg-[#1447E6] text-white rounded-2xl py-4 font-bold flex items-center justify-center mt-2 transition-colors shadow-lg shadow-blue-500/20"
           >
-            {isPending ? <FiLoader className="animate-spin mr-2 w-4 h-4" /> : null}
+            {isPending ? <Spinner className="animate-spin mr-2 w-4 h-4" /> : null}
             {initialData ? 'O\'zgarishlarni saqlash' : 'Saqlash'}
           </button>
         </form>
@@ -630,7 +629,7 @@ const Customers = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] font-sans pb-32 md:pb-8">
+    <div className="min-h-screen bg-[#f8fafc] font-sans pb-32 md:pb-8">
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-8 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
         <div className="absolute top-10 -right-4 w-16 h-16 bg-white/5 rounded-full" />
@@ -638,12 +637,12 @@ const Customers = () => {
           <div>
             <h1 className="text-white text-2xl font-bold">Mijozlar</h1>
             <div className="flex items-center gap-2 mt-1">
-              <FiUsers className="text-blue-200 w-4 h-4" />
+              <Users className="text-blue-200 w-4 h-4" />
               <span className="text-blue-200 text-sm">{isDebtorFilter ? customerList.length : (customersData?.count || 0)} ta mijoz</span>
             </div>
           </div>
           <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center">
-            <FiUsers className="text-white w-5 h-5" />
+            <Users className="text-white w-5 h-5" />
           </div>
         </div>
       </div>
@@ -651,7 +650,7 @@ const Customers = () => {
       <div className="px-4 md:px-8 -mt-3 relative z-10 max-w-6xl mx-auto">
         <div className="relative mb-4">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <FiSearch className="text-gray-400 w-4 h-4" />
+            <MagnifyingGlass className="text-gray-400 w-4 h-4" />
           </div>
           <input
             type="text"
@@ -681,7 +680,7 @@ const Customers = () => {
         <div className="mt-2 md:grid md:grid-cols-2 md:gap-3">
           {isLoading ? (
             <div className="flex justify-center py-20 md:col-span-2">
-              <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />
+              <Spinner className="w-10 h-10 text-[#1447E6] animate-spin" />
             </div>
           ) : customerList.length > 0 ? (
             customerList.map((customer) => (
@@ -695,7 +694,7 @@ const Customers = () => {
             ))
           ) : (
             <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm">
-              <FiUsers className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm font-medium mb-1">Mijozlar topilmadi</p>
               <p className="text-xs text-gray-400">Yangi mijoz qo'shish uchun + tugmasini bosing</p>
             </div>
@@ -707,7 +706,7 @@ const Customers = () => {
         onClick={() => { setCustomerToEdit(null); setIsAddEditModalOpen(true); }}
         className="fixed bottom-24 right-5 w-14 h-14 bg-[#1447E6] rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 text-white z-40 active:scale-95 transition-transform"
       >
-        <FiPlus className="w-6 h-6" />
+        <Plus className="w-6 h-6" />
       </button>
 
       <AnimatePresence>

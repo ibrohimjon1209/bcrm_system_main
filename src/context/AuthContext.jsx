@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import authService from '../services/auth.service';
 
 const AuthContext = createContext(null);
@@ -9,22 +9,18 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+    const init = async () => {
       const token = localStorage.getItem('access_token');
       const savedUser = localStorage.getItem('user');
-      
       if (token && savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setUser(parsed);
         setIsAuthenticated(true);
-        setUser(JSON.parse(savedUser));
-        
         try {
-          // Verify token/get fresh user data from server
-          const userData = await authService.getCurrentUser();
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-        } catch (error) {
-          // api.js interceptor handles token refresh and redirect automatically.
-          // Only update state here if tokens were already cleared.
+          const fresh = await authService.getCurrentUser();
+          setUser(fresh);
+          localStorage.setItem('user', JSON.stringify(fresh));
+        } catch {
           if (!localStorage.getItem('access_token')) {
             setUser(null);
             setIsAuthenticated(false);
@@ -33,41 +29,54 @@ export const AuthProvider = ({ children }) => {
       }
       setIsLoading(false);
     };
-
-    initAuth();
+    init();
   }, []);
 
-  const login = async (credentials) => {
-    try {
-      const data = await authService.login(credentials);
-      setUser(data.user);
-      setIsAuthenticated(true);
-      return data;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const login = useCallback(async (credentials) => {
+    const data = await authService.login(credentials);
+    setUser(data.user);
+    setIsAuthenticated(true);
+    return data;
+  }, []);
 
-  const logout = async () => {
-    try {
-      await authService.logout();
-    } finally {
+  const logout = useCallback(async () => {
+    try { await authService.logout(); } finally {
       setUser(null);
       setIsAuthenticated(false);
     }
-  };
+  }, []);
+
+  const updateUser = useCallback((updated) => {
+    setUser(updated);
+    localStorage.setItem('user', JSON.stringify(updated));
+  }, []);
+
+  // Role helpers
+  const isSuperAdmin = user?.role === 'superadmin';
+  const isOwner = user?.role === 'owner';
+  const isAdmin = user?.role === 'admin';
+  const isOwnerOrAdmin = isOwner || isAdmin;
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      isLoading,
+      login,
+      logout,
+      updateUser,
+      isSuperAdmin,
+      isOwner,
+      isAdmin,
+      isOwnerOrAdmin,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };

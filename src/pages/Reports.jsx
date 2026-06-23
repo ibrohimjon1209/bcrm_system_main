@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FiTrendingUp, FiDollarSign, FiShoppingCart, FiCreditCard,
-  FiPackage, FiBarChart2, FiLoader, FiUsers, FiAlertCircle, FiTruck
-} from 'react-icons/fi';
+  TrendUp, CurrencyDollar, ShoppingCart, CreditCard,
+  Package, ChartBar, Spinner, Users, WarningCircle, Truck
+} from '@phosphor-icons/react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useDashboardStats, useProfitReport, useWarehouseReport } from '../hooks/useReports';
 import { useDebtors } from '../hooks/useCustomers';
@@ -19,7 +19,7 @@ const periodMap = {
 };
 
 const StatCard = ({ icon: Icon, bg, color, title, value, sub, loading, valueUSD }) => (
-  <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+  <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
     <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-3`}>
       <Icon className={`w-4 h-4 ${color}`} />
     </div>
@@ -101,7 +101,7 @@ const Reports = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] pb-32 md:pb-8">
+    <div className="min-h-screen bg-[#f8fafc] pb-32 md:pb-8">
 
       {/* Header */}
       <div className="bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] px-5 md:px-8 pt-10 pb-10 relative overflow-hidden">
@@ -150,42 +150,42 @@ const Reports = () => {
             {/* Stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
-                icon={FiDollarSign} bg="bg-emerald-50" color="text-emerald-600"
+                icon={CurrencyDollar} bg="bg-emerald-50" color="text-emerald-600"
                 title="Tushum ($)"
                 value={`$${fmt(revUSD)}`}
                 sub={`${fmt(revUZS)} so'm`}
                 loading={dashLoading}
               />
               <StatCard
-                icon={FiTrendingUp} bg="bg-teal-50" color="text-teal-600"
+                icon={TrendUp} bg="bg-teal-50" color="text-teal-600"
                 title="Sof Foyda"
                 value={`$${fmt(profUSD)}`}
                 sub={`${fmt(profUZS)} so'm`}
                 loading={dashLoading}
               />
               <StatCard
-                icon={FiCreditCard} bg="bg-amber-50" color="text-amber-600"
+                icon={CreditCard} bg="bg-amber-50" color="text-amber-600"
                 title="Xarajat"
                 value={`$${fmt(costUSD)}`}
                 sub={`${fmt(costUZS)} so'm`}
                 loading={dashLoading}
               />
               <StatCard
-                icon={FiTruck} bg="bg-indigo-50" color="text-indigo-600"
+                icon={Truck} bg="bg-indigo-50" color="text-indigo-600"
                 title="Xarid jami"
                 value={`$${fmt(purchaseUSD)}`}
                 sub={`${fmt(purchaseUZS)} so'm | ${purchasesCount} ta`}
                 loading={dashLoading}
               />
               <StatCard
-                icon={FiShoppingCart} bg="bg-purple-50" color="text-purple-600"
+                icon={ShoppingCart} bg="bg-purple-50" color="text-purple-600"
                 title="Sotuvlar"
                 value={salesCount}
                 sub="ta sotuv"
                 loading={dashLoading}
               />
               <StatCard
-                icon={FiCreditCard} bg="bg-red-50" color="text-red-500"
+                icon={CreditCard} bg="bg-red-50" color="text-red-500"
                 title="Qarz"
                 value={`$${fmt(debtUSD)}`}
                 sub={`${fmt(debtUZS)} so'm | ${debtors.length} ta`}
@@ -251,7 +251,7 @@ const Reports = () => {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <FiPackage className="w-4 h-4 text-[#1447E6]" />
+                    <Package className="w-4 h-4 text-[#1447E6]" />
                   </div>
                   <h3 className="text-sm font-bold text-gray-900">Top Mahsulotlar</h3>
                 </div>
@@ -280,7 +280,7 @@ const Reports = () => {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center">
-                    <FiUsers className="w-4 h-4 text-purple-600" />
+                    <Users className="w-4 h-4 text-purple-600" />
                   </div>
                   <h3 className="text-sm font-bold text-gray-900">Top Mijozlar</h3>
                 </div>
@@ -312,7 +312,7 @@ const Reports = () => {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center">
-                    <FiUsers className="w-4 h-4 text-red-500" />
+                    <Users className="w-4 h-4 text-red-500" />
                   </div>
                   <h3 className="text-sm font-bold text-gray-900">Qarzdorlar</h3>
                   <span className="ml-auto text-xs font-bold text-red-400">{debtors.length} ta</span>
@@ -359,7 +359,7 @@ const Reports = () => {
 
             {profitLoading ? (
               <div className="flex justify-center py-14">
-                <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />
+                <Spinner className="w-10 h-10 text-[#1447E6] animate-spin" />
               </div>
             ) : profitData ? (
               <>
@@ -403,7 +403,7 @@ const Reports = () => {
               </>
             ) : (
               <div className="text-center py-14 bg-white rounded-2xl border border-gray-100 text-gray-400">
-                <FiBarChart2 className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                <ChartBar className="w-10 h-10 mx-auto mb-3 opacity-20" />
                 <p className="text-sm font-medium">Ma'lumot topilmadi</p>
               </div>
             )}
@@ -415,21 +415,21 @@ const Reports = () => {
           <div className="space-y-4 pb-4">
             {warehouseSpinning ? (
               <div className="flex justify-center py-14">
-                <FiLoader className="w-10 h-10 text-[#1447E6] animate-spin" />
+                <Spinner className="w-10 h-10 text-[#1447E6] animate-spin" />
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <StatCard icon={FiPackage} bg="bg-blue-50"   color="text-[#1447E6]"  title="Jami Mahsulotlar" value={totalProducts}         sub="tur"  />
-                  <StatCard icon={FiPackage} bg="bg-purple-50" color="text-purple-600" title="Jami Miqdor"      value={fmt(totalQty)}         sub="dona" />
-                  <StatCard icon={FiPackage} bg="bg-orange-50" color="text-orange-600" title="Ombor Qiymati"    value={`${fmt(totalValUZS)} so'm`} valueUSD={totalValUSD} sub="" />
+                  <StatCard icon={Package} bg="bg-blue-50"   color="text-[#1447E6]"  title="Jami Mahsulotlar" value={totalProducts}         sub="tur"  />
+                  <StatCard icon={Package} bg="bg-purple-50" color="text-purple-600" title="Jami Miqdor"      value={fmt(totalQty)}         sub="dona" />
+                  <StatCard icon={Package} bg="bg-orange-50" color="text-orange-600" title="Ombor Qiymati"    value={`${fmt(totalValUZS)} so'm`} valueUSD={totalValUSD} sub="" />
                 </div>
 
                 {lowStockList.length > 0 && (
                   <div className="bg-white rounded-2xl p-4 shadow-sm border border-red-100">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center text-red-500">
-                        <FiAlertCircle className="w-4 h-4" />
+                        <WarningCircle className="w-4 h-4" />
                       </div>
                       <h3 className="text-sm font-bold text-gray-900">Kam Qolgan Mahsulotlar</h3>
                       <span className="ml-auto text-xs font-bold text-red-400">{lowStockList.length} ta</span>
