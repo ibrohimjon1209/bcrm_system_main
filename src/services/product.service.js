@@ -10,11 +10,13 @@ import api from './api';
 const productService = {
   /**
    * Get list of products
-   * @param {Object} params - { search, category, unit, ordering, page }
+   * @param {Object} params - { search, category, unit, ordering, page, companyId }
    * @returns {Promise<PaginatedResponse<ProductList>>}
    */
   getProducts: async (params) => {
-    const response = await api.get('/api/products/', { params });
+    const { companyId, ...restParams } = params || {};
+    const url = companyId ? `/api/companies/${companyId}/products/` : '/api/products/';
+    const response = await api.get(url, { params: restParams });
     return response.data;
   },
 
@@ -103,7 +105,9 @@ const productService = {
    * @returns {Promise<Product[]>}
    */
   getProductsForSale: async (params = {}) => {
-    const response = await api.get('/api/products/for_sale/', { params });
+    const { companyId, ...restParams } = params;
+    const url = companyId ? `/api/companies/${companyId}/products/for_sale/` : '/api/products/for_sale/';
+    const response = await api.get(url, { params: restParams });
     const data = response.data;
     if (Array.isArray(data)) return { results: data, count: data.length };
     if (data?.results) return data;
@@ -115,8 +119,9 @@ const productService = {
    * Get low stock products
    * @returns {Promise<Product[]>}
    */
-  getLowStockProducts: async () => {
-    const response = await api.get('/api/products/low_stock/');
+  getLowStockProducts: async (companyId) => {
+    const url = companyId ? `/api/companies/${companyId}/products/low_stock/` : '/api/products/low_stock/';
+    const response = await api.get(url);
     return response.data;
   },
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Gear, User, Users, LockKey, Bell, Globe, Plus, Trash, PencilSimple, Check, X, Eye, EyeSlash } from '@phosphor-icons/react';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import { useAuth } from '../context/AuthContext';
 import { useMyCompany, useUpdateMyCompany, useMySettings, useUpdateMySettings } from '../hooks/useCompany';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
@@ -70,7 +70,7 @@ const Settings = () => {
     e.preventDefault();
     const updated = await authService.updateProfile(profileForm);
     updateUser({ ...user, ...updated });
-    toast.success('Profil yangilandi');
+    showToast('success', 'Profil yangilandi');
   };
 
   // Password form
@@ -78,10 +78,10 @@ const Settings = () => {
   const [showPw, setShowPw] = useState({ old: false, new: false, confirm: false });
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (pwForm.new_password !== pwForm.confirm) { toast.error('Parollar mos kelmadi'); return; }
-    if (pwForm.new_password.length < 6) { toast.error('Kamida 6 ta belgi'); return; }
+    if (pwForm.new_password !== pwForm.confirm) { showToast('error', 'Parollar mos kelmadi'); return; }
+    if (pwForm.new_password.length < 6) { showToast('error', 'Kamida 6 ta belgi'); return; }
     await authService.changePassword({ old_password: pwForm.old_password, new_password: pwForm.new_password });
-    toast.success('Parol o\'zgartirildi');
+    showToast('success', 'Parol o\'zgartirildi');
     setPwForm({ old_password: '', new_password: '', confirm: '' });
   };
 

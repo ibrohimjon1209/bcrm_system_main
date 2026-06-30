@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import notificationService from '../services/notification.service';
 
 export const useNotifications = () =>
@@ -26,7 +26,7 @@ export const useMarkAllRead = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
       qc.invalidateQueries({ queryKey: ['notifications-unread'] });
-      toast.success('Barchasi o\'qildi deb belgilandi');
+      showToast('success', 'Barchasi o\'qildi deb belgilandi');
     },
   });
 };

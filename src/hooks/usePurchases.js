@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import purchaseService from '../services/purchase.service';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 
 export const usePurchases = (params) => {
   return useQuery({
@@ -39,9 +39,9 @@ export const useCreatePurchase = () => {
       queryClient.refetchQueries({ queryKey: ['purchases'] });
       queryClient.refetchQueries({ queryKey: ['products'] });
       invalidateDashboard(queryClient);
-      toast.success('Xarid muvaffaqiyatli saqlandi');
+      showToast('success', 'Xarid muvaffaqiyatli saqlandi');
     },
-    onError: (err) => toast.error(getErrMsg(err)),
+    onError: (err) => showToast('error', getErrMsg(err)),
   });
 };
 
@@ -53,9 +53,9 @@ export const useUpdatePurchase = () => {
       queryClient.refetchQueries({ queryKey: ['purchases'] });
       queryClient.refetchQueries({ queryKey: ['products'] });
       invalidateDashboard(queryClient);
-      toast.success('Xarid muvaffaqiyatli yangilandi');
+      showToast('success', 'Xarid muvaffaqiyatli yangilandi');
     },
-    onError: (err) => toast.error(getErrMsg(err)),
+    onError: (err) => showToast('error', getErrMsg(err)),
   });
 };
 
@@ -67,9 +67,9 @@ export const useDeletePurchase = () => {
       queryClient.refetchQueries({ queryKey: ['purchases'] });
       queryClient.refetchQueries({ queryKey: ['products'] });
       invalidateDashboard(queryClient);
-      toast.success("Xarid muvaffaqiyatli o'chirildi");
+      showToast('success', "Xarid muvaffaqiyatli o'chirildi");
     },
-    onError: (err) => toast.error(getErrMsg(err)),
+    onError: (err) => showToast('error', getErrMsg(err)),
   });
 };
 

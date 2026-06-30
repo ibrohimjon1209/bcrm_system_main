@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { FiBriefcase, FiSearch, FiPlus, FiEdit2, FiTrash2, FiPower, FiLogIn, FiX, FiCheck } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiBriefcase, FiSearch, FiPlus, FiEdit2, FiTrash2, FiPower, FiLogIn, FiX, FiCheck, FiPackage, FiUsers, FiDollarSign, FiShoppingCart, FiUser } from 'react-icons/fi';
 import { useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany, useToggleCompanyActive, useLoginAs } from '../../hooks/useCompany';
 import { fmtDate, fmtDateTime } from '../../utils/formatters';
-import { toast } from 'react-toastify';
+import { showToast } from '../../utils/toast';
 
 const EMPTY_FORM = { name: '', owner_name: '', phone: '', description: '' };
 
 const SACompanies = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -49,7 +51,7 @@ const SACompanies = () => {
         localStorage.setItem('access_token', data.access);
         if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-        toast.success('Kompaniyaga kirildi');
+        showToast('success', 'Kompaniyaga kirildi');
         window.location.href = '/';
       }
     } catch { /* error handled by api.js */ }
@@ -157,7 +159,32 @@ const SACompanies = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{fmtDate(c.created_at)}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <button onClick={() => navigate(`/base_bcrm/companies/${c.id}/products`)} title="Mahsulotlar"
+                            className="w-7 h-7 bg-indigo-900/40 rounded-lg flex items-center justify-center text-indigo-400 hover:bg-indigo-900/70 transition-colors"
+                          >
+                            <FiPackage className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => navigate(`/base_bcrm/companies/${c.id}/customers`)} title="Mijozlar"
+                            className="w-7 h-7 bg-teal-900/40 rounded-lg flex items-center justify-center text-teal-400 hover:bg-teal-900/70 transition-colors"
+                          >
+                            <FiUsers className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => navigate(`/base_bcrm/companies/${c.id}/sales`)} title="Sotuvlar"
+                            className="w-7 h-7 bg-emerald-900/40 rounded-lg flex items-center justify-center text-emerald-400 hover:bg-emerald-900/70 transition-colors"
+                          >
+                            <FiDollarSign className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => navigate(`/base_bcrm/companies/${c.id}/purchases`)} title="Xaridlar"
+                            className="w-7 h-7 bg-orange-900/40 rounded-lg flex items-center justify-center text-orange-400 hover:bg-orange-900/70 transition-colors"
+                          >
+                            <FiShoppingCart className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => navigate(`/base_bcrm/companies/${c.id}/users`)} title="Foydalanuvchilar"
+                            className="w-7 h-7 bg-pink-900/40 rounded-lg flex items-center justify-center text-pink-400 hover:bg-pink-900/70 transition-colors"
+                          >
+                            <FiUser className="w-3.5 h-3.5" />
+                          </button>
                           <button onClick={() => handleLoginAs(c.id)} title="Kirish sifatida"
                             className="w-7 h-7 bg-blue-900/40 rounded-lg flex items-center justify-center text-blue-400 hover:bg-blue-900/70 transition-colors"
                           >
@@ -173,7 +200,7 @@ const SACompanies = () => {
                               c.is_active ? 'bg-amber-900/40 text-amber-400 hover:bg-amber-900/70' : 'bg-green-900/40 text-green-400 hover:bg-green-900/70'
                             }`}
                           >
-                            {c.is_active ? <FiPower className="w-3.5 h-3.5" /> : <FiPower className="w-3.5 h-3.5" />}
+                            <FiPower className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => setDeleteConfirm(c.id)} title="O'chirish"
                             className="w-7 h-7 bg-red-900/40 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-900/70 transition-colors"

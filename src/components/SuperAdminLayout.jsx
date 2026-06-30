@@ -5,7 +5,7 @@ import {
   FiClipboard, FiLogOut, FiMenu, FiX, FiShield,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 
 const navItems = [
   { path: '/base_bcrm',               icon: FiGrid,        label: 'Dashboard'      },
@@ -23,7 +23,7 @@ const SuperAdminLayout = ({ children }) => {
 
   const handleLogout = async () => {
     await logout();
-    toast.success('Chiqildi');
+    showToast('success', 'Chiqildi');
     navigate('/login');
   };
 

@@ -1,11 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import productService from '../services/product.service';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
+import { useCompany } from './useCompany';
 
 export const useProducts = (params) => {
+  const { currentCompanyId } = useCompany();
+  const companyId = params?.companyId || currentCompanyId;
+  const queryParams = companyId ? { ...params, companyId } : params;
   return useQuery({
-    queryKey: ['products', params],
-    queryFn: () => productService.getProducts(params),
+    queryKey: ['products', queryParams],
+    queryFn: () => productService.getProducts(queryParams),
   });
 };
 
@@ -23,7 +27,7 @@ export const useCreateProduct = () => {
     mutationFn: (data) => productService.createProduct(data),
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['products'] });
-      toast.success('Mahsulot muvaffaqiyatli qo\'shildi');
+      showToast('success', 'Mahsulot muvaffaqiyatli qo\'shildi');
     },
   });
 };
@@ -35,7 +39,7 @@ export const useUpdateProduct = () => {
     onSuccess: (data) => {
       queryClient.refetchQueries({ queryKey: ['products'] });
       queryClient.refetchQueries({ queryKey: ['product', data.id] });
-      toast.success('Mahsulot muvaffaqiyatli yangilandi');
+      showToast('success', 'Mahsulot muvaffaqiyatli yangilandi');
     },
   });
 };
@@ -46,7 +50,7 @@ export const useDeleteProduct = () => {
     mutationFn: (id) => productService.deleteProduct(id),
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['products'] });
-      toast.success('Mahsulot muvaffaqiyatli o\'chirildi');
+      showToast('success', 'Mahsulot muvaffaqiyatli o\'chirildi');
     },
   });
 };
@@ -64,7 +68,7 @@ export const useCreateCategory = () => {
     mutationFn: (data) => productService.createCategory(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast.success('Kategoriya muvaffaqiyatli qo\'shildi');
+      showToast('success', 'Kategoriya muvaffaqiyatli qo\'shildi');
     },
   });
 };
@@ -75,7 +79,7 @@ export const useUpdateCategory = () => {
     mutationFn: ({ id, data }) => productService.updateCategory(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast.success('Kategoriya muvaffaqiyatli yangilandi');
+      showToast('success', 'Kategoriya muvaffaqiyatli yangilandi');
     },
   });
 };
@@ -86,22 +90,27 @@ export const useDeleteCategory = () => {
     mutationFn: (id) => productService.deleteCategory(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast.success('Kategoriya muvaffaqiyatli o\'chirildi');
+      showToast('success', 'Kategoriya muvaffaqiyatli o\'chirildi');
     },
   });
 };
 
-export const useLowStockProducts = () => {
+export const useLowStockProducts = (companyId) => {
+  const { currentCompanyId } = useCompany();
+  const cid = companyId || currentCompanyId;
   return useQuery({
-    queryKey: ['products', 'low_stock'],
-    queryFn: () => productService.getLowStockProducts(),
+    queryKey: ['products', 'low_stock', cid],
+    queryFn: () => productService.getLowStockProducts(cid),
   });
 };
 
 export const useProductsForSale = (params) => {
+  const { currentCompanyId } = useCompany();
+  const companyId = params?.companyId || currentCompanyId;
+  const queryParams = companyId ? { ...params, companyId } : params;
   return useQuery({
-    queryKey: ['products', 'for_sale', params],
-    queryFn: () => productService.getProductsForSale(params),
+    queryKey: ['products', 'for_sale', queryParams],
+    queryFn: () => productService.getProductsForSale(queryParams),
   });
 };
 
@@ -119,7 +128,7 @@ export const useCreateVariant = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['variants'] });
-      toast.success('Variant muvaffaqiyatli qo\'shildi');
+      showToast('success', 'Variant muvaffaqiyatli qo\'shildi');
     },
   });
 };
@@ -131,7 +140,7 @@ export const useUpdateVariant = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['variants'] });
-      toast.success('Variant muvaffaqiyatli yangilandi');
+      showToast('success', 'Variant muvaffaqiyatli yangilandi');
     },
   });
 };
@@ -143,7 +152,7 @@ export const useDeleteVariant = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['variants'] });
-      toast.success('Variant muvaffaqiyatli o\'chirildi');
+      showToast('success', 'Variant muvaffaqiyatli o\'chirildi');
     },
   });
 };

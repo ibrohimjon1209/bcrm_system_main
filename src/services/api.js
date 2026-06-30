@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://apidemobcrm.nsdcorporation.uz';
 
@@ -44,12 +44,12 @@ api.interceptors.response.use(
 
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest);
-      } catch {1
+      } catch {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
         if (!window.location.pathname.includes('/login')) {
-          toast.error('Seans muddati tugadi. Iltimos, qaytadan kiring.');
+          showToast('error', 'Seans muddati tugadi. Iltimos, qaytadan kiring.');
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -70,10 +70,10 @@ api.interceptors.response.use(
         response?.status !== 403 &&
         !(response?.status >= 500 && isReportEndpoint)
       ) {
-        toast.error(errorMessage);
+        showToast('error', errorMessage);
       }
 
-      return Promise.reject(error);1
+      return Promise.reject(error);
     }
   );
 

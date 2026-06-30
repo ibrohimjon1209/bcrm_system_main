@@ -5,7 +5,7 @@ import {
   ArrowLeft, Eye, EyeSlash, Check, CreditCard,
   Calendar, WarningCircle, CheckCircle,
 } from '@phosphor-icons/react';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import { useAuth } from '../context/AuthContext';
 import { useMyCompany } from '../hooks/useCompany';
 import { useMySubscription } from '../hooks/useSubscription';
@@ -51,18 +51,18 @@ const Profile = () => {
       const updated = await authService.updateProfile({ full_name: fullName });
       updateUser({ ...user, ...updated });
       setEditMode(false);
-      toast.success('Profil yangilandi');
+      showToast('success', 'Profil yangilandi');
     } finally { setSaving(false); }
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (pwForm.new_password !== pwForm.confirm) { toast.error('Parollar mos kelmadi'); return; }
-    if (pwForm.new_password.length < 6) { toast.error('Kamida 6 ta belgi kerak'); return; }
+    if (pwForm.new_password !== pwForm.confirm) { showToast('error', 'Parollar mos kelmadi'); return; }
+    if (pwForm.new_password.length < 6) { showToast('error', 'Kamida 6 ta belgi kerak'); return; }
     setPwSaving(true);
     try {
       await authService.changePassword({ old_password: pwForm.old_password, new_password: pwForm.new_password });
-      toast.success("Parol o'zgartirildi");
+      showToast('success', "Parol o'zgartirildi");
       setPwForm({ old_password: '', new_password: '', confirm: '' });
     } finally { setPwSaving(false); }
   };

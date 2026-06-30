@@ -1,11 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import customerService from '../services/customer.service';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
+import { useCompany } from './useCompany';
 
 export const useCustomers = (params) => {
+  const { currentCompanyId } = useCompany();
+  const companyId = params?.companyId || currentCompanyId;
+  const queryParams = companyId ? { ...params, companyId } : params;
   return useQuery({
-    queryKey: ['customers', params],
-    queryFn: () => customerService.getCustomers(params),
+    queryKey: ['customers', queryParams],
+    queryFn: () => customerService.getCustomers(queryParams),
   });
 };
 
@@ -50,9 +54,9 @@ export const useCreateCustomer = () => {
     mutationFn: (data) => customerService.createCustomer(data),
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
-      toast.success('Mijoz muvaffaqiyatli qo\'shildi');
+      showToast('success', 'Mijoz muvaffaqiyatli qo\'shildi');
     },
-    onError: (err) => toast.error(getErrorMsg(err)),
+    onError: (err) => showToast('error', getErrorMsg(err)),
   });
 };
 
@@ -63,9 +67,9 @@ export const useUpdateCustomer = () => {
     onSuccess: (data) => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
       queryClient.refetchQueries({ queryKey: ['customer', data.id] });
-      toast.success('Mijoz muvaffaqiyatli yangilandi');
+      showToast('success', 'Mijoz muvaffaqiyatli yangilandi');
     },
-    onError: (err) => toast.error(getErrorMsg(err)),
+    onError: (err) => showToast('error', getErrorMsg(err)),
   });
 };
 
@@ -75,23 +79,27 @@ export const useDeleteCustomer = () => {
     mutationFn: (id) => customerService.deleteCustomer(id),
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
-      toast.success('Mijoz muvaffaqiyatli o\'chirildi');
+      showToast('success', 'Mijoz muvaffaqiyatli o\'chirildi');
     },
-    onError: (err) => toast.error(getErrorMsg(err)),
+    onError: (err) => showToast('error', getErrorMsg(err)),
   });
 };
 
-export const useDebtors = () => {
+export const useDebtors = (companyId) => {
+  const { currentCompanyId } = useCompany();
+  const cid = companyId || currentCompanyId;
   return useQuery({
-    queryKey: ['customers', 'debtors'],
-    queryFn: () => customerService.getDebtors(),
+    queryKey: ['customers', 'debtors', cid],
+    queryFn: () => customerService.getDebtors(cid),
   });
 };
 
-export const useVipCustomers = () => {
+export const useVipCustomers = (companyId) => {
+  const { currentCompanyId } = useCompany();
+  const cid = companyId || currentCompanyId;
   return useQuery({
-    queryKey: ['customers', 'vip'],
-    queryFn: () => customerService.getVipCustomers(),
+    queryKey: ['customers', 'vip', cid],
+    queryFn: () => customerService.getVipCustomers(cid),
   });
 };
 
@@ -103,9 +111,9 @@ export const usePayDebt = () => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
       queryClient.refetchQueries({ queryKey: ['customer', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['reports', 'dashboard'] });
-      toast.success("Qarz to'lovi muvaffaqiyatli amalga oshirildi");
+      showToast('success', "Qarz to'lovi muvaffaqiyatli amalga oshirildi");
     },
-    onError: (err) => toast.error(getErrorMsg(err)),
+    onError: (err) => showToast('error', getErrorMsg(err)),
   });
 };
 
@@ -113,9 +121,9 @@ export const useSendDebtReminder = () => {
   return useMutation({
     mutationFn: (id) => customerService.sendDebtReminder(id),
     onSuccess: () => {
-      toast.success('Eslatma muvaffaqiyatli yuborildi');
+      showToast('success', 'Eslatma muvaffaqiyatli yuborildi');
     },
-    onError: (err) => toast.error(getErrorMsg(err)),
+    onError: (err) => showToast('error', getErrorMsg(err)),
   });
 };
 
@@ -132,8 +140,8 @@ export const useUnlinkTelegram = () => {
     onSuccess: (_, id) => {
       queryClient.refetchQueries({ queryKey: ['customers'] });
       queryClient.refetchQueries({ queryKey: ['customer', id] });
-      toast.success("Telegram bog'liqlik bekor qilindi");
+      showToast('success', "Telegram bog'liqlik bekor qilindi");
     },
-    onError: (err) => toast.error(getErrorMsg(err)),
+    onError: (err) => showToast('error', getErrorMsg(err)),
   });
 };

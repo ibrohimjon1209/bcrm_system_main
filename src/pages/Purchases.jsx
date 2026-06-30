@@ -5,7 +5,7 @@ import {
 } from '@phosphor-icons/react';
 import { usePurchases, usePurchaseDetail, useCreatePurchase, useUpdatePurchase, useDeletePurchase } from '../hooks/usePurchases';
 import { useProducts } from '../hooks/useProducts';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const fmt = (num) => parseFloat(num || 0).toLocaleString('uz-UZ');
@@ -123,13 +123,13 @@ const Purchases = () => {
 
   const handleSave = async () => {
     if (modalMode === 'create' && cart.length === 0) {
-      toast.error('Kamida bitta mahsulot tanlang');
+      showToast('error', 'Kamida bitta mahsulot tanlang');
       return;
     }
     try {
       if (modalMode === 'create') {
         if (cart.some(item => !item.variantId)) {
-          toast.error('Tanlangan mahsulotlarda variant ma\'lumoti topilmadi');
+          showToast('error', 'Tanlangan mahsulotlarda variant ma\'lumoti topilmadi');
           return;
         }
 

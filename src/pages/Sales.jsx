@@ -7,7 +7,8 @@ import {
 import { useProductsForSale } from '../hooks/useProducts';
 import { useCustomers, useCreateCustomer } from '../hooks/useCustomers';
 import { useCreateSale, useSales, useSale, useUpdateSale, useDeleteSale } from '../hooks/useSales';
-import { toast } from 'react-toastify';
+import { useCompany } from '../hooks/useCompany';
+import { showToast } from '../utils/toast';
 import { AddEditCustomerModal } from './Customers';
 import { AnimatePresence } from 'framer-motion';
 
@@ -185,17 +186,19 @@ const Sales = () => {
       .finally(() => setRateLoading(false));
   }, []);
 
+  const { currentCompanyId } = useCompany();
   const { data: productsData, isLoading: productsLoading } = useProductsForSale({
     page: productPage,
     ...(searchTerm ? { search: searchTerm } : {}),
+    ...(currentCompanyId ? { companyId: currentCompanyId } : {}),
   });
-  const { data: customersData } = useCustomers();
+  const { data: customersData } = useCustomers(currentCompanyId ? { companyId: currentCompanyId } : {});
   const createSaleMutation = useCreateSale();
   const createCustomerMutation = useCreateCustomer();
   const updateSaleMutation = useUpdateSale();
   const deleteSaleMutation = useDeleteSale();
 
-  const { data: historyData, isLoading: historyLoading, isFetching: historyFetching } = useSales({ page: historyPage, page_size: 5, ordering: '-created_at' });
+  const { data: historyData, isLoading: historyLoading, isFetching: historyFetching } = useSales({ page: historyPage, page_size: 5, ordering: '-created_at', ...(currentCompanyId ? { companyId: currentCompanyId } : {}) });
   const { data: saleDetail, isLoading: detailLoading } = useSale(selectedSaleId);
   const historyTotal = historyData?.count || 0;
   const hasMoreHistory = allHistorySales.length < historyTotal;
@@ -236,7 +239,7 @@ const Sales = () => {
   const addToCart = (product, variant = null) => {
     const qty = variant ? variant.quantity : (product.total_quantity ?? product.quantity);
     if (qty <= 0) {
-      toast.warning('Mahsulot omborda qolmagan');
+      showToast('warning', 'Mahsulot omborda qolmagan');
       return;
     }
     const cartId = variant ? `v-${variant.id}` : `p-${product.id}`;
@@ -249,7 +252,7 @@ const Sales = () => {
           item.cartId === cartId ? { ...item, quantity: currentQty + 1 } : item
         ));
       } else {
-        toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
+        showToast('warning', 'Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
       }
     } else {
       const isUzs = (variant ? variant.currency : product.currency) === 'uzs';
@@ -287,7 +290,7 @@ const Sales = () => {
         const newQuantity = item.quantity + change;
         if (newQuantity <= 0) return item;
         if (newQuantity <= item.maxQuantity) return { ...item, quantity: newQuantity };
-        toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
+      showToast('warning', 'Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
         return item;
       }
       return item;
@@ -304,7 +307,7 @@ const Sales = () => {
     }
     const item = cart.find(i => i.id === id);
     if (num > item.maxQuantity) {
-      toast.warning('Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
+      showToast('warning', 'Ombordagi miqdordan ko\'p sotib olib bo\'lmaydi');
       setCart(cart.map(i => i.id === id ? { ...i, quantity: i.maxQuantity } : i));
       return;
     }
@@ -338,7 +341,7 @@ const Sales = () => {
   const handleCompleteSale = async () => {
     if (cart.length === 0) return;
     if (paymentType === 'debt' && !selectedCustomer) {
-      toast.error('Nasiya uchun mijozni tanlang');
+      showToast('error', 'Nasiya uchun mijozni tanlang');
       return;
     }
 
@@ -348,7 +351,7 @@ const Sales = () => {
     const uzsScale = cartHasUzs && customUzsAmount > 0 && defaultUzs > 0 ? customUzsAmount / defaultUzs : 1;
     const usdScale = cartHasUsd && customUsdAmount > 0 && defaultUsd > 0 ? customUsdAmount / defaultUsd : 1;
     if (cart.some(item => !item.variantId)) {
-      toast.error('Tanlangan mahsulotlarda variant ma\'lumoti topilmadi');
+      showToast('error', 'Tanlangan mahsulotlarda variant ma\'lumoti topilmadi');
       return;
     }
 
@@ -866,7 +869,7 @@ const Sales = () => {
             {paymentType === 'debt' ? (
               <button
                 onClick={() => {
-                  if (!selectedCustomer) { toast.error('Mijozni tanlang'); return; }
+                  if (!selectedCustomer) { showToast('error', 'Mijozni tanlang'); return; }
                   setShowDebtModal(true);
                 }}
                 disabled={!selectedCustomer}

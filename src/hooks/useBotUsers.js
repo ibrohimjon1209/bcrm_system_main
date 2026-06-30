@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import botUserService from '../services/botUser.service';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 
 export const useBotUsers = () => {
   return useQuery({
@@ -15,7 +15,7 @@ export const useCreateBotUser = () => {
     mutationFn: (data) => botUserService.createBotUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bot-users'] });
-      toast.success("Bot foydalanuvchi qo'shildi");
+      showToast('success', "Bot foydalanuvchi qo'shildi");
     },
   });
 };
@@ -26,7 +26,7 @@ export const useDeleteBotUser = () => {
     mutationFn: (chatId) => botUserService.deleteBotUser(chatId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bot-users'] });
-      toast.success("Bot foydalanuvchi o'chirildi");
+      showToast('success', "Bot foydalanuvchi o'chirildi");
     },
   });
 };

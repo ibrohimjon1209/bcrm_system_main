@@ -8,7 +8,7 @@ import {
   CaretDown, CaretUp, PaperPlaneRight
 } from '@phosphor-icons/react';
 import { useCustomers, useCustomer, useDebtors, useCustomerSalesHistory, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, usePayDebt, useSendDebtReminder } from '../hooks/useCustomers';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
 
 const statusConfig = {
@@ -150,7 +150,7 @@ const CustomerDetailModal = ({ customer, onClose, onDelete, onEdit }) => {
   const handlePayDebt = async (e) => {
     e.preventDefault();
     if (!payAmount || parseFloat(payAmount) <= 0) {
-      toast.error("To'lov miqdorini kiriting");
+      showToast('error', "To'lov miqdorini kiriting");
       return;
     }
     try {
@@ -451,7 +451,7 @@ export const AddEditCustomerModal = ({ initialData, onClose, onSave, isPending }
       };
       onSave(cleanData);
     } else {
-      toast.error('Ma\'lumotlarni to\'liq kiriting');
+      showToast('error', 'Ma\'lumotlarni to\'liq kiriting');
     }
   };
 

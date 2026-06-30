@@ -2,7 +2,9 @@ import api from './api';
 
 const customerService = {
   getCustomers: async (params) => {
-    const response = await api.get('/api/customers/', { params });
+    const { companyId, ...restParams } = params || {};
+    const url = companyId ? `/api/companies/${companyId}/customers/` : '/api/customers/';
+    const response = await api.get(url, { params: restParams });
     return response.data;
   },
 
@@ -25,8 +27,9 @@ const customerService = {
     await api.delete(`/api/customers/${id}/`);
   },
 
-  getDebtors: async () => {
-    const response = await api.get('/api/customers/debtors/');
+  getDebtors: async (companyId) => {
+    const url = companyId ? `/api/companies/${companyId}/customers/debtors/` : '/api/customers/debtors/';
+    const response = await api.get(url);
     return response.data;
   },
 
@@ -36,8 +39,9 @@ const customerService = {
     return response.data;
   },
 
-  getVipCustomers: async () => {
-    const response = await api.get('/api/customers/vip/');
+  getVipCustomers: async (companyId) => {
+    const url = companyId ? `/api/companies/${companyId}/customers/vip/` : '/api/customers/vip/';
+    const response = await api.get(url);
     return response.data;
   },
 

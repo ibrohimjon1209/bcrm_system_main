@@ -10,6 +10,13 @@ export const fmtUSD = (val) => {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+export const fmtMoney = (val, currency = 'uzs') => {
+  const n = parseFloat(val || 0);
+  if (isNaN(n)) return currency === 'usd' ? '$0' : '0 so\'m';
+  if (currency === 'usd') return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString('uz-UZ') + ' so\'m';
+};
+
 export const fmtDate = (dateStr) => {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('uz-UZ');

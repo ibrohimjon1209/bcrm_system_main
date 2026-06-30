@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Phone, LockKey, Eye, EyeSlash } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { formatPhoneNumber, cleanPhoneNumber } from '../utils/phoneFormat';
+import mainLogo from '../assets/main_logo.svg';
 
 const Login = () => {
   const { login } = useAuth();
@@ -67,8 +68,8 @@ const Login = () => {
 
           {/* Header */}
           <div className="text-center mb-10">
-            <div className="w-20 h-20 rounded-3xl mx-auto mb-4 overflow-hidden shadow-lg">
-              <img src="/person_logo.jpg" alt="logo" className="w-full h-full object-cover" />
+            <div className="w-20 h-20 rounded-3xl mx-auto mb-4 overflow-hidden shadow-lg flex items-center justify-center">
+              <img src={mainLogo} alt="logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-3xl font-black text-slate-900 mb-2">Shaxrixon Balon</h1>
             <p className="text-sm text-slate-500">CRM Tizimi</p>

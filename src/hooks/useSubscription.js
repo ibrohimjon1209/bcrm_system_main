@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import subscriptionService from '../services/subscription.service';
 
 export const useSubscriptions = (params) =>
@@ -15,7 +15,7 @@ export const useCreateSubscription = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: subscriptionService.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); toast.success('Obuna yaratildi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); showToast('success', 'Obuna yaratildi'); },
   });
 };
 
@@ -23,7 +23,7 @@ export const useUpdateSubscription = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => subscriptionService.update(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); toast.success('Obuna yangilandi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); showToast('success', 'Obuna yangilandi'); },
   });
 };
 
@@ -31,7 +31,7 @@ export const useBlockSubscription = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: subscriptionService.block,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); toast.success('Obuna bloklandi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); showToast('success', 'Obuna bloklandi'); },
   });
 };
 
@@ -39,6 +39,6 @@ export const useExtendSubscription = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => subscriptionService.extend(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); toast.success('Obuna uzaytirildi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); showToast('success', 'Obuna uzaytirildi'); },
   });
 };

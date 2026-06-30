@@ -1,11 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import mainLogo from '../assets/main_logo.svg';
 
 const SplashScreen = ({ onDone }) => {
   const [visible, setVisible] = useState(true);
+  const [particles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 4 + 2,
+      duration: Math.random() * 3 + 4,
+      delay: Math.random() * 2,
+    }))
+  );
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 1800);
+    const timer = setTimeout(() => setVisible(false), 2500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -19,6 +30,31 @@ const SplashScreen = ({ onDone }) => {
           transition={{ duration: 0.8, ease: 'easeInOut' }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-[#1447E6] to-[#0F3CC7] overflow-hidden"
         >
+          {/* Floating particles */}
+          {particles.map((p) => (
+            <motion.div
+              key={p.id}
+              className="absolute rounded-full bg-white/20"
+              style={{
+                width: p.size,
+                height: p.size,
+                left: `${p.x}%`,
+                top: `${p.y}%`,
+              }}
+              animate={{
+                y: [0, -30, 0],
+                opacity: [0.2, 0.6, 0.2],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{
+                duration: p.duration,
+                repeat: Infinity,
+                delay: p.delay,
+                ease: 'easeInOut',
+              }}
+            />
+          ))}
+
           {/* Bismillah */}
           <motion.p
             initial={{ opacity: 0, y: -10 }}
@@ -36,49 +72,75 @@ const SplashScreen = ({ onDone }) => {
             transition={{ delay: 0.2, duration: 1, ease: 'easeOut' }}
             className="text-center flex flex-col items-center relative z-10"
           >
-            {/* App icon with shimmer */}
+            {/* App logo with dynamic effects */}
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.4, duration: 1, ease: 'easeOut' }}
-              className="w-24 h-24 bg-white/10 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl flex items-center justify-center mb-6 relative overflow-hidden"
+              initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
+              className="w-28 h-28 bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl rounded-3xl flex items-center justify-center mb-6 relative overflow-hidden"
             >
+              {/* Shimmer sweep */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0"
+                className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0"
                 animate={{ x: ['-150%', '150%'] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              />
+
+              {/* Pulse ring */}
+              <motion.div
+                className="absolute inset-0 rounded-3xl border-2 border-white/30"
+                animate={{ scale: [1, 1.15], opacity: [0.5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+              />
+
+              {/* Logo image */}
+              <motion.img
+                src={mainLogo}
+                alt="Shaxrixon Balon"
+                className="w-20 h-20 object-contain relative z-10"
+                animate={{ y: [0, -4, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               />
-              <img src="/person_logo.jpg" alt="Shaxrixon Balon" className="w-full h-full object-cover relative z-10 rounded-3xl" />
             </motion.div>
 
-            <h1 className="text-white text-4xl md:text-5xl font-black tracking-tight mb-2">
+            <motion.h1
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.8, ease: 'easeOut' }}
+              className="text-white text-4xl md:text-5xl font-black tracking-tight mb-2"
+            >
               Shaxrixon Balon
-            </h1>
-            <p className="text-blue-200 text-sm md:text-base font-semibold tracking-widest uppercase">
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.8 }}
+              className="text-blue-200 text-sm md:text-base font-semibold tracking-widest uppercase"
+            >
               CRM Tizimi
-            </p>
+            </motion.p>
           </motion.div>
 
           {/* Animated loading bar */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8, duration: 1 }}
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ delay: 1.1, duration: 0.6 }}
             className="mt-14 w-48 h-[3px] bg-blue-800/30 rounded-full relative overflow-hidden z-10"
           >
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: '200%' }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute top-0 left-0 bottom-0 w-1/2 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-0 left-0 bottom-0 w-1/2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.9)]"
             />
           </motion.div>
 
           {/* NSD logo bottom */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1, duration: 1 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.3, duration: 0.8 }}
             className="absolute bottom-10 flex flex-col items-center gap-3 z-10"
           >
             <img src="/circled_nsd_logo.png" alt="NSD Corporation" className="w-10 h-10 object-contain drop-shadow-md" />

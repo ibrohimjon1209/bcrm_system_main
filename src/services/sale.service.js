@@ -8,11 +8,13 @@ import api from './api';
 const saleService = {
   /**
    * Get list of sales
-   * @param {Object} params - { customer, payment_method, date_from, date_to, ordering, page }
+   * @param {Object} params - { customer, payment_method, date_from, date_to, ordering, page, companyId }
    * @returns {Promise<PaginatedResponse<Sale>>}
    */
   getSales: async (params) => {
-    const response = await api.get('/api/sales/', { params });
+    const { companyId, ...restParams } = params || {};
+    const url = companyId ? `/api/companies/${companyId}/sales/` : '/api/sales/';
+    const response = await api.get(url, { params: restParams });
     return response.data;
   },
 

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import userService from '../services/user.service';
 
 export const useUsers = () =>
@@ -9,7 +9,7 @@ export const useCreateUser = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: userService.createUser,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Admin qo\'shildi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); showToast('success', 'Admin qo\'shildi'); },
   });
 };
 
@@ -17,7 +17,7 @@ export const useUpdateUser = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => userService.updateUser(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Yangilandi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); showToast('success', 'Yangilandi'); },
   });
 };
 
@@ -25,6 +25,6 @@ export const useDeleteUser = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: userService.deleteUser,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success("O'chirildi"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); showToast('success', "O'chirildi"); },
   });
 };

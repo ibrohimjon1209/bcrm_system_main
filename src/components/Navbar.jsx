@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   House, ShoppingCart, Package, Users, ChartBar, Truck,
@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadCount } from '../hooks/useNotifications';
+import mainLogo from '../assets/main_logo.svg';
 
 const mainNavItems = [
   { path: '/',          icon: House,         label: 'Asosiy'   },
@@ -45,7 +46,11 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { isOwner, logout } = useAuth();
   const { data: unreadData } = useUnreadCount();
-  const unreadCount = unreadData?.count || 0;
+  const unreadCount = useMemo(() => {
+    const count = unreadData?.count;
+    if (typeof count === 'number') return count;
+    return 0;
+  }, [unreadData]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const at = (path) => location.pathname === path;
@@ -68,7 +73,7 @@ const Navbar = () => {
       {/* ── Desktop sidebar ─────────────────────────────────── */}
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-60 flex-col bg-white border-r border-slate-100 shadow-sm z-50">
         <div className="px-6 py-5 border-b border-slate-50 flex items-center gap-3">
-          <img src="/person_logo.jpg" alt="logo" className="w-8 h-8 object-cover rounded-full shrink-0" />
+          <img src={mainLogo} alt="logo" className="w-8 h-8 object-contain shrink-0" />
           <div className="min-w-0">
             <h1 className="text-base font-black text-[#1447E6] tracking-tight truncate">Shaxrixon Balon</h1>
             <p className="text-[10px] text-slate-400 mt-0.5">CRM Tizimi</p>
@@ -157,7 +162,7 @@ const Navbar = () => {
 
               <div className="flex items-center justify-between px-5 py-3 border-b border-slate-50">
                 <div className="flex items-center gap-3">
-                  <img src="/person_logo.jpg" alt="" className="w-7 h-7 rounded-full object-cover" />
+                  <img src={mainLogo} alt="" className="w-7 h-7 object-contain" />
                   <p className="text-sm font-black text-slate-800">Shaxrixon Balon</p>
                 </div>
                 <button onClick={() => setDrawerOpen(false)}

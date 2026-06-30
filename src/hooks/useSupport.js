@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
 import supportService from '../services/support.service';
 
 export const useTickets = (params) =>
@@ -12,7 +12,7 @@ export const useCreateTicket = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: supportService.createTicket,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tickets'] }); toast.success('Murojaat yaratildi'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tickets'] }); showToast('success', 'Murojaat yaratildi'); },
   });
 };
 
@@ -23,7 +23,7 @@ export const useUpdateTicket = () => {
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['ticket', id] });
-      toast.success('Yangilandi');
+      showToast('success', 'Yangilandi');
     },
   });
 };
@@ -32,7 +32,7 @@ export const useDeleteTicket = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: supportService.deleteTicket,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tickets'] }); toast.success("O'chirildi"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tickets'] }); showToast('success', "O'chirildi"); },
   });
 };
 

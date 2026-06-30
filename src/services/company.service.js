@@ -36,6 +36,16 @@ const companyService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },
+
+  // Company-scoped endpoints (for super admin viewing specific company data)
+  getCompanyProducts: (id, params) => api.get(`/api/companies/${id}/products/`, { params }).then(r => r.data),
+  getCompanyCategories: (id, params) => api.get(`/api/companies/${id}/categories/`, { params }).then(r => r.data),
+  getCompanyCustomers: (id, params) => api.get(`/api/companies/${id}/customers/`, { params }).then(r => r.data),
+  getCompanySales: (id, params) => api.get(`/api/companies/${id}/sales/`, { params }).then(r => r.data),
+  getCompanyPurchases: (id, params) => api.get(`/api/companies/${id}/purchases/`, { params }).then(r => r.data),
+  getCompanyUsers: (id, params) => api.get(`/api/companies/${id}/users/`, { params }).then(r => r.data),
+  getCompanyNotifications: (id, params) => api.get(`/api/companies/${id}/notifications/`, { params }).then(r => r.data),
+  getCompanyTickets: (id, params) => api.get(`/api/companies/${id}/tickets/`, { params }).then(r => r.data),
 };
 
 export default companyService;

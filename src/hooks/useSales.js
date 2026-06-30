@@ -1,14 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import saleService from '../services/sale.service';
-import { toast } from 'react-toastify';
+import { showToast } from '../utils/toast';
+import { useCompany } from './useCompany';
 
 const invalidateDashboard = (qc) =>
   qc.invalidateQueries({ queryKey: ['reports', 'dashboard'] });
 
 export const useSales = (params) => {
+  const { currentCompanyId } = useCompany();
+  const companyId = params?.companyId || currentCompanyId;
+  const queryParams = companyId ? { ...params, companyId } : params;
   return useQuery({
-    queryKey: ['sales', params],
-    queryFn: () => saleService.getSales(params),
+    queryKey: ['sales', queryParams],
+    queryFn: () => saleService.getSales(queryParams),
   });
 };
 
@@ -29,7 +33,7 @@ export const useCreateSale = () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       invalidateDashboard(queryClient);
-      toast.success('Sotuv muvaffaqiyatli amalga oshirildi');
+      showToast('success', 'Sotuv muvaffaqiyatli amalga oshirildi');
     },
   });
 };
@@ -42,15 +46,17 @@ export const useUpdateSale = () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['sale', id] });
       invalidateDashboard(queryClient);
-      toast.success('Sotuv yangilandi');
+      showToast('success', 'Sotuv yangilandi');
     },
   });
 };
 
-export const useOverdueSales = () => {
+export const useOverdueSales = (companyId) => {
+  const { currentCompanyId } = useCompany();
+  const cid = companyId || currentCompanyId;
   return useQuery({
-    queryKey: ['sales', 'overdue'],
-    queryFn: () => saleService.getOverdueSales(),
+    queryKey: ['sales', 'overdue', cid],
+    queryFn: () => saleService.getOverdueSales(cid),
   });
 };
 
@@ -61,7 +67,7 @@ export const useDeleteSale = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       invalidateDashboard(queryClient);
-      toast.success('Sotuv muvaffaqiyatli o\'chirildi');
+      showToast('success', 'Sotuv muvaffaqiyatli o\'chirildi');
     },
   });
 };

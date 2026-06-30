@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CompanyProvider } from './context/CompanyContext';
 import Navbar from './components/Navbar';
 import SuperAdminLayout from './components/SuperAdminLayout';
 import SplashScreen from './components/SplashScreen';
@@ -21,6 +22,13 @@ import Profile from './pages/Profile';
 // Super Admin pages
 import SADashboard from './pages/superadmin/SADashboard';
 import SACompanies from './pages/superadmin/SACompanies';
+import SACompanyDetail from './pages/superadmin/SACompanyDetail';
+import SACompanyProducts from './pages/superadmin/SACompanyProducts';
+import SACompanyCustomers from './pages/superadmin/SACompanyCustomers';
+import SACompanySales from './pages/superadmin/SACompanySales';
+import SACompanyPurchases from './pages/superadmin/SACompanyPurchases';
+import SACompanyUsers from './pages/superadmin/SACompanyUsers';
+import SACompanySettings from './pages/superadmin/SACompanySettings';
 import SASubscriptions from './pages/superadmin/SASubscriptions';
 import SASupport from './pages/superadmin/SASupport';
 import SAAuditLog from './pages/superadmin/SAAuditLog';
@@ -109,6 +117,41 @@ const AppContent = () => {
             <SuperAdminLayout><SACompanies /></SuperAdminLayout>
           </RequireSuperAdmin>
         } />
+        <Route path="/base_bcrm/companies/:id" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanyDetail /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
+        <Route path="/base_bcrm/companies/:id/products" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanyProducts /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
+        <Route path="/base_bcrm/companies/:id/customers" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanyCustomers /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
+        <Route path="/base_bcrm/companies/:id/sales" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanySales /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
+        <Route path="/base_bcrm/companies/:id/purchases" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanyPurchases /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
+        <Route path="/base_bcrm/companies/:id/users" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanyUsers /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
+        <Route path="/base_bcrm/companies/:id/settings" element={
+          <RequireSuperAdmin>
+            <SuperAdminLayout><SACompanySettings /></SuperAdminLayout>
+          </RequireSuperAdmin>
+        } />
         <Route path="/base_bcrm/subscriptions" element={
           <RequireSuperAdmin>
             <SuperAdminLayout><SASubscriptions /></SuperAdminLayout>
@@ -192,9 +235,11 @@ const App = () => {
       {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
       {splashDone && (
         <AuthProvider>
-          <Router>
-            <AppContent />
-          </Router>
+          <CompanyProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </CompanyProvider>
         </AuthProvider>
       )}
     </>
